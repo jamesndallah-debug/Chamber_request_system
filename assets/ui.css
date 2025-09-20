@@ -1,0 +1,178 @@
+:root{--brand-blue:#667eea;--brand-purple:#764ba2;--brand-gold:#d4af37;--brand-green:#16a34a;--modern-blue:#667eea;--modern-purple:#764ba2}
+.btn-gradient{background:linear-gradient(135deg,var(--modern-blue),var(--modern-purple));color:#fff}
+.btn-gradient:hover{filter:brightness(1.05);transform:translateY(-2px);box-shadow:0 10px 20px rgba(102,126,234,0.3)}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#0b5ed710;border:1px solid #0b5ed733;color:var(--brand-blue);font-weight:600}
+.glass-card{background:rgba(255,255,255,.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.06)}
+.orb-bg{position:absolute;inset:-40px;filter:blur(70px);opacity:.35;pointer-events:none}
+@keyframes floatOrb{0%{transform:translateY(0)}50%{transform:translateY(-12px)}100%{transform:translateY(0)}}
+.sidebar-brand{background:linear-gradient(90deg,var(--brand-blue),var(--brand-gold));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+.card-stat{border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc}
+
+/* Unified table styling */
+.ui-table{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+.ui-table table{width:100%;border-collapse:separate;border-spacing:0}
+.ui-table thead th{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 12px;text-align:left;font-weight:600;color:#475569}
+.ui-table tbody td{padding:10px 12px;border-bottom:1px solid #f1f5f9}
+.ui-table tbody tr:nth-child(even){background:#f8fafc}
+.ui-table tbody tr:hover{background:#eef6ff}
+:root{
+	--bg:#0b1220;--panel:#0f172a;--muted:#334155;--text:#e2e8f0;--text-dim:#94a3b8;
+	--primary:#3b82f6;--primary-600:#2563eb;--success:#16a34a;--warn:#f59e0b;--danger:#ef4444;
+	--radius:12px;--shadow:0 8px 24px rgba(0,0,0,.25)
+}
+html,body{background:var(--bg);color:var(--text)}
+/* Ensure brand background shows even if Tailwind sets bg-gray-100 */
+body.bg-gray-100{background:var(--bg) !important;color:var(--text)}
+/* Brand links */
+a{color:var(--primary)}
+a:hover{filter:brightness(1.1)}
+.container{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));backdrop-filter:saturate(130%) blur(8px);border:1px solid rgba(148,163,184,.18);border-radius:var(--radius);box-shadow:0 12px 30px rgba(0,0,0,.28)}
+.card-header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid rgba(148,163,184,.15)}
+.card-body{padding:16px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;border:0;color:#fff;background:var(--muted);cursor:pointer;transition:transform .08s ease, filter .15s ease}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(135deg,var(--modern-blue),var(--modern-purple))}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(102,126,234,0.3)}
+.btn-success{background:linear-gradient(135deg,#22c55e,var(--success))}
+.btn-danger{background:linear-gradient(135deg,#f87171,var(--danger))}
+.btn-modern{background:linear-gradient(135deg,var(--modern-blue),var(--modern-purple));color:#fff;transition:all 0.2s ease}
+.btn-modern:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(102,126,234,0.3)}
+.input,select{background:#0b1220;border:1px solid rgba(148,163,184,.2);color:var(--text);padding:12px 14px;border-radius:12px;transition:border-color .2s ease, box-shadow .2s ease}
+.input:focus,select:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px}
+.badge-success{background:rgba(22,163,74,.15);color:#22c55e}
+.badge-warn{background:rgba(245,158,11,.15);color:#f59e0b}
+.badge-danger{background:rgba(239,68,68,.15);color:#ef4444}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.muted{color:var(--text-dim)}
+
+/* Glassy panels override for Tailwind utility backgrounds used in views */
+body .bg-white{background:rgba(255,255,255,.06) !important;border:1px solid rgba(148,163,184,.18);backdrop-filter:saturate(130%) blur(8px);color:var(--text)}
+body .bg-gray-50{background:rgba(255,255,255,.04) !important;border:1px solid rgba(148,163,184,.14);color:var(--text)}
+body .shadow{box-shadow:0 10px 24px rgba(0,0,0,.25) !important}
+
+/* Tables */
+table{border-collapse:separate;border-spacing:0;width:100%}
+thead th{position:sticky;top:0;background:rgba(255,255,255,.06);backdrop-filter:saturate(130%) blur(8px);color:var(--text-dim);font-weight:600;letter-spacing:.02em}
+tbody tr{transition:background .15s ease}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+th,td{padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.12)}
+
+/* Headers / top nav accent underline */
+header{position:relative}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,#0b5ed7,#d4af37,#16a34a);opacity:.4}
+
+/* Brand theme and animated background orbs (Blue, Gold, Green) */
+body::before,body::after,body .bg-orb{content:"";position:fixed;inset:auto;z-index:-1;filter:blur(60px);opacity:.35;width:420px;height:420px;border-radius:50%}
+body::before{left:-120px;top:-80px;background:radial-gradient(closest-side,#0b5ed7,transparent 70%);animation:float1 18s ease-in-out infinite}
+body::after{right:-120px;top:20%;width:520px;height:520px;background:radial-gradient(closest-side,#d4af37,transparent 70%);animation:float2 22s ease-in-out infinite}
+body .bg-orb{left:30%;bottom:-140px;width:480px;height:480px;background:radial-gradient(closest-side,#16a34a,transparent 70%);animation:float3 26s ease-in-out infinite}
+@keyframes float1{0%{transform:translate(0,0)}50%{transform:translate(60px,40px)}100%{transform:translate(0,0)}}
+@keyframes float2{0%{transform:translate(0,0)}50%{transform:translate(-30px,-30px)}100%{transform:translate(0,0)}}
+@keyframes float3{0%{transform:translate(0,0)}50%{transform:translate(20px,-40px)}100%{transform:translate(0,0)}}
+@keyframes fadeIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+
+/* Enhanced Text Visibility and Clarity */
+* {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
+}
+
+/* Clear text rendering for all elements */
+body, p, span, div, h1, h2, h3, h4, h5, h6, td, th, li, a, button, label {
+    text-shadow: none !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.025em !important;
+    line-height: 1.5 !important;
+}
+
+/* Enhanced contrast for better visibility */
+.text-slate-100 { color: #f8fafc !important; font-weight: 600 !important; }
+.text-slate-200 { color: #e2e8f0 !important; font-weight: 500 !important; }
+.text-slate-300 { color: #cbd5e1 !important; font-weight: 500 !important; }
+.text-slate-400 { color: #94a3b8 !important; font-weight: 500 !important; }
+
+/* Glass effect text improvements */
+.glass, .glass * {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.glass .text-slate-100, .glass .text-slate-200, .glass .text-slate-300 {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+    font-weight: 600 !important;
+}
+
+/* Form Controls - Enhanced visibility */
+.form-control, input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], textarea, select {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border: 2px solid #d1d5db !important;
+    border-radius: 8px !important;
+    padding: 0.875rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    -webkit-text-fill-color: #000000 !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+/* Override any conflicting styles for description fields */
+textarea[name*="description"], input[name*="description"], 
+textarea[id*="description"], input[id*="description"],
+textarea[name="fin_description"], input[name="fin_description"] {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    -webkit-text-fill-color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+/* Ensure placeholder text is visible */
+.form-control::placeholder, input::placeholder, textarea::placeholder {
+    color: #6b7280 !important;
+    opacity: 1 !important;
+}
+
+.form-control:focus, input:focus, textarea:focus, select:focus {
+    outline: none !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    background-color: #fefefe !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+.form-control:read-only, input:read-only {
+    background-color: #f3f4f6 !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+/* Button text clarity */
+.btn, button {
+    font-weight: 600 !important;
+    letter-spacing: 0.025em !important;
+    text-shadow: none !important;
+}
+
+/* Table text improvements */
+table th, table td {
+    font-weight: 500 !important;
+    letter-spacing: 0.025em !important;
+}
+
+/* Badge and chip text clarity */
+.badge, .chip, .px-2 {
+    font-weight: 600 !important;
+    text-shadow: none !important;
+}
+
+
