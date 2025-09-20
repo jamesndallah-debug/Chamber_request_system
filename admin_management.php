@@ -949,7 +949,7 @@ try {
                     🔧 System Maintenance
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    <!-- Database Management -->
+                 
                     <div class="glass p-4 rounded-lg border border-blue-500/20">
                         <h4 class="text-md font-semibold text-blue-300 mb-3 flex items-center gap-2">
                             💾 Database Management
