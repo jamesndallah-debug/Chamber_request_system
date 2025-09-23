@@ -10,9 +10,9 @@ if (!isset($_GET['code'])) {
 $code = $_GET['code'];
 
 // Exchange authorization code for access token
-$client_id = 'YOUR_GOOGLE_CLIENT_ID';
-$client_secret = 'YOUR_GOOGLE_CLIENT_SECRET';
-$redirect_uri = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/chamber_request_system/google_callback.php';
+$client_id = defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '';
+$client_secret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : '';
+$redirect_uri = rtrim(defined('BASE_URL') ? BASE_URL : ('http://' . $_SERVER['HTTP_HOST'] . '/chamber_request_system'), '/') . '/google_callback.php';
 
 $token_url = 'https://oauth2.googleapis.com/token';
 $token_data = [

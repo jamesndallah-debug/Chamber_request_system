@@ -1,0 +1,6 @@
+# Ignore local environment file and other sensitive or generated content
+.env
+/uploads/
+/vendor/
+.DS_Store
+Thumbs.db

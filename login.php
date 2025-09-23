@@ -1,6 +1,7 @@
 <?php
 // FILE: views/login.php
 // Login page for users.
+require_once __DIR__ . '/function.php';
 
 $error = $error ?? '';
 ?>
@@ -137,15 +138,24 @@ $error = $error ?? '';
             position: absolute;
             top: 30px;
             left: 30px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
             color: white;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .brand-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
         }
         
         .login-section {
@@ -395,6 +405,12 @@ $error = $error ?? '';
             .login-section {
                 padding: 40px 30px;
             }
+            
+            .brand-logo {
+                width: 64px;
+                height: 64px;
+                padding: 8px;
+            }
         }
     </style>
 </head>
@@ -408,7 +424,7 @@ $error = $error ?? '';
                 <div class="objective-text">Member Value Creation</div>
             </div>
             <div class="brand-logo">
-                👑
+                <img src="https://tccia.or.tz/wp-content/uploads/2025/05/cropped-tccia_retina_logo.png" alt="TCCIA Logo" />
             </div>
             <div class="welcome-content">
                 <h1>WELCOME</h1>
@@ -463,7 +479,7 @@ $error = $error ?? '';
                     <span>Or</span>
                 </div>
                 
-                <button type="button" class="other-signin-btn" onclick="signInWithGoogle()">
+                <button type="button" id="google-signin-btn" class="other-signin-btn" onclick="signInWithGoogle()">
                     <svg width="18" height="18" viewBox="0 0 24 24" style="margin-right: 10px;">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -483,8 +499,10 @@ $error = $error ?? '';
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        // Real Google OAuth Client ID - replace with your actual client ID
-        const GOOGLE_CLIENT_ID = '1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com';
+        // Google OAuth Client ID from server config
+        const GOOGLE_CLIENT_ID = '<?= addslashes(GOOGLE_CLIENT_ID) ?>';
+        // Application base URL from server config
+        const APP_BASE_URL = '<?= rtrim(BASE_URL, "/") ?>';
     </script>
     
     <script>
@@ -526,23 +544,8 @@ $error = $error ?? '';
             
             // Check if we have a real Google Client ID configured
             if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== '1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com') {
-                // Use real Google OAuth
-                if (typeof google !== 'undefined' && google.accounts) {
-                    google.accounts.id.initialize({
-                        client_id: GOOGLE_CLIENT_ID,
-                        callback: handleCredentialResponse
-                    });
-                    
-                    google.accounts.id.prompt((notification) => {
-                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                            // Fallback to popup
-                            fallbackToPopup();
-                        }
-                    });
-                } else {
-                    // Fallback to popup if GSI not loaded
-                    fallbackToPopup();
-                }
+                // Always use popup with account chooser (select_account)
+                fallbackToPopup();
             } else {
                 // Use demo mode for development
                 setTimeout(() => {
@@ -555,10 +558,11 @@ $error = $error ?? '';
             if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== '1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com') {
                 const authUrl = 'https://accounts.google.com/oauth2/auth?' +
                     'client_id=' + GOOGLE_CLIENT_ID + '&' +
-                    'redirect_uri=' + encodeURIComponent(window.location.origin + '/chamber_request_system/google_callback.php') + '&' +
+                    'redirect_uri=' + encodeURIComponent(APP_BASE_URL + '/google_callback.php') + '&' +
                     'response_type=code&' +
-                    'scope=email profile&' +
-                    'access_type=offline';
+                    'scope=openid%20email%20profile&' +
+                    'access_type=offline&' +
+                    'prompt=select_account';
                     
                 const popup = window.open(authUrl, 'google-signin', 'width=500,height=600,scrollbars=yes,resizable=yes');
                 
