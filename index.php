@@ -313,9 +313,24 @@ switch ($action) {
                             $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                             $stmt->execute([$lastId]);
                         } else if ($type === 'Salary advance') {
-                            // HRM → Finance → ED only; skip HOD and Auditor
-                            $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                            $stmt->execute([$lastId]);
+                            // Salary advance chain depends on requester:
+                            // - Default (Employee/HOD/Auditor/Admin): HRM (pending) -> Finance (pending) -> ED (pending)
+                            // - HRM requester: Finance (pending) -> ED (pending) [skip HRM]
+                            // - Finance requester: HRM (pending) -> ED (pending) [skip Finance]
+                            // HOD and Auditor stages are always skipped (auto-approved)
+                            if ($userRole === 2) {
+                                // HRM requester: skip HRM stage
+                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                $stmt->execute([$lastId]);
+                            } else if ($userRole === 5) {
+                                // Finance requester: skip Finance stage
+                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?");
+                                $stmt->execute([$lastId]);
+                            } else {
+                                // Everyone else: HRM then Finance then ED
+                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                $stmt->execute([$lastId]);
+                            }
                         } else {
                             // Role-based workflow routing
                             switch ($userRole) {
@@ -389,6 +404,13 @@ switch ($action) {
         
         // Ensure the request exists and is viewable by the user.
         if (!$request) {
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        // Enforce visibility rules for special request types
+        if (!can_view_request((int)$user['role_id'], $user, $request)) {
+            // Optionally set a flash message, then redirect
+            $_SESSION['error'] = 'You do not have permission to view this request.';
             header('Location: index.php?action=dashboard');
             exit;
         }

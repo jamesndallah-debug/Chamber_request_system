@@ -46,41 +46,52 @@ class RequestModel {
                 JOIN users u ON r.user_id = u.user_id
                 WHERE 1=1 ";
         $params = [];
-        
+
+        // Helper snippets for special-type visibility
+        $not_salary_or_retirement = " AND r.request_type NOT IN ('Salary advance','TCCIA retirement request')";
+        $not_retirement_only = " AND r.request_type <> 'TCCIA retirement request'";
+
         switch ($role_id) {
-            case 1: // Employee
+            case 1: // Employee - only own requests
                 $sql .= "AND r.user_id = ?";
                 $params[] = $user_data['user_id'];
                 break;
-            case 3: // HOD
-                // Show all requests from the department, but highlight pending ones
-                $sql .= "AND u.department = ?";
+
+            case 3: // HOD - must NOT see Salary advance or TCCIA retirement; show items pending HOD in their department
+                $sql .= "AND u.department = ? AND r.hod_status = 'pending'" . $not_salary_or_retirement;
                 $params[] = $user_data['department'];
                 break;
-            case 2: // HRM
-                // Show all requests that have passed HOD approval
-                $sql .= "AND r.hod_status = 'approved'";
+
+            case 2: // HRM - must NOT see TCCIA retirement; show items pending HRM with prior HOD approved (where applicable)
+                $sql .= "AND r.hrm_status = 'pending'" . $not_retirement_only . " AND (
+                            r.hod_status = 'approved' OR r.hod_status IS NULL OR r.hod_status = ''
+                        )";
                 break;
-            case 6: // Internal Auditor
-                // Show all requests that have passed HRM approval
-                $sql .= "AND r.hrm_status = 'approved'";
+
+            case 6: // Internal Auditor - must NOT see Salary advance or TCCIA retirement; show items pending Auditor with HRM approved
+                $sql .= "AND r.auditor_status = 'pending' AND r.hrm_status = 'approved'" . $not_salary_or_retirement;
                 break;
-            case 5: // Finance
-                // Show all requests that have passed Auditor approval
-                $sql .= "AND r.auditor_status = 'approved'";
+
+            case 5: // Finance - show items pending Finance. For Salary advance and TCCIA retirement, they are allowed regardless of Auditor.
+                $sql .= "AND r.finance_status = 'pending' AND (
+                            r.request_type IN ('Salary advance','TCCIA retirement request')
+                            OR r.auditor_status = 'approved'
+                        )";
                 break;
-            case 4: // ED
-                // Show all requests that have passed Finance approval
-                $sql .= "AND r.finance_status = 'approved'";
+
+            case 4: // ED - show items pending ED with Finance approved
+                $sql .= "AND r.ed_status = 'pending' AND r.finance_status = 'approved'";
                 break;
-            case 7: // Admin
-                $sql .= "ORDER BY r.created_at DESC";
+
+            case 7: // Admin - can see everything
+                // no extra filters
                 break;
+
             default:
                 // No requests for this role.
                 return [];
         }
-        
+
         $sql .= " ORDER BY r.created_at DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);

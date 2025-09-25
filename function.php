@@ -171,30 +171,93 @@ function e($string) {
 
 // Check if a user can approve a request.
 function can_approve($user_role_id, $request) {
-    // This function can be expanded with more complex logic.
-    // Currently, it checks if the request is pending and the user's role ID
-    // corresponds to the next step in the workflow.
-    
-    // Admin can always approve.
-    if ($user_role_id == 7) {
+    // Enhanced approval logic with special routing rules
+    $type = (string)($request['request_type'] ?? '');
+
+    // Admin can always approve
+    if ((int)$user_role_id === 7) {
         return true;
     }
-    
-    // Check pending status based on the role.
-    switch ($user_role_id) {
+
+    // Special workflow: Salary advance => HRM -> Finance -> ED (HOD and Auditor excluded)
+    if ($type === 'Salary advance') {
+        switch ((int)$user_role_id) {
+            case 2: // HRM
+                return ($request['hrm_status'] ?? null) === 'pending';
+            case 5: // Finance
+                return ($request['finance_status'] ?? null) === 'pending' && ($request['hrm_status'] ?? null) === 'approved';
+            case 4: // ED
+                return ($request['ed_status'] ?? null) === 'pending' && ($request['finance_status'] ?? null) === 'approved';
+            default:
+                return false;
+        }
+    }
+
+    // Special workflow: TCCIA retirement request => Finance -> ED only
+    if ($type === 'TCCIA retirement request') {
+        switch ((int)$user_role_id) {
+            case 5: // Finance
+                return ($request['finance_status'] ?? null) === 'pending';
+            case 4: // ED
+                return ($request['ed_status'] ?? null) === 'pending' && ($request['finance_status'] ?? null) === 'approved';
+            default:
+                return false;
+        }
+    }
+
+    // Default workflow: HOD -> HRM -> Auditor -> Finance -> ED
+    switch ((int)$user_role_id) {
         case 3: // HOD
-            return $request['hod_status'] === 'pending';
+            return ($request['hod_status'] ?? null) === 'pending';
         case 2: // HRM
-            return $request['hrm_status'] === 'pending' && $request['hod_status'] === 'approved';
+            return ($request['hrm_status'] ?? null) === 'pending' && ($request['hod_status'] ?? null) === 'approved';
         case 6: // Internal Auditor
-            return $request['auditor_status'] === 'pending' && $request['hrm_status'] === 'approved';
+            return ($request['auditor_status'] ?? null) === 'pending' && ($request['hrm_status'] ?? null) === 'approved';
         case 5: // Finance
-            return $request['finance_status'] === 'pending' && $request['auditor_status'] === 'approved';
+            return ($request['finance_status'] ?? null) === 'pending' && ($request['auditor_status'] ?? null) === 'approved';
         case 4: // ED
-            return $request['ed_status'] === 'pending' && $request['finance_status'] === 'approved';
+            return ($request['ed_status'] ?? null) === 'pending' && ($request['finance_status'] ?? null) === 'approved';
         default:
             return false;
     }
+}
+
+// Visibility helper to enforce who can see which request types
+function can_view_request(int $viewer_role_id, array $viewer_data, array $request): bool {
+    $type = (string)($request['request_type'] ?? '');
+    $owner_id = (int)($request['user_id'] ?? 0);
+    $viewer_id = (int)($viewer_data['user_id'] ?? 0);
+
+    // Admin can view all
+    if ($viewer_role_id === 7) return true;
+    // Owner can view own request
+    if ($viewer_role_id === 1 && $viewer_id === $owner_id) return true;
+
+    // HOD and Internal Auditor cannot see Salary advance or TCCIA retirement
+    if (in_array($viewer_role_id, [3, 6], true) && in_array($type, ['Salary advance', 'TCCIA retirement request'], true)) {
+        return false;
+    }
+    // HRM cannot see TCCIA retirement
+    if ($viewer_role_id === 2 && $type === 'TCCIA retirement request') {
+        return false;
+    }
+
+    // Finance and ED can view all financial requests
+    if (in_array($viewer_role_id, [4, 5], true)) return true;
+
+    // HOD can view department requests except those restricted above
+    if ($viewer_role_id === 3) {
+        return ((string)($viewer_data['department'] ?? '')) === ((string)($request['department'] ?? ''));
+    }
+
+    // HRM can view non-restricted requests
+    if ($viewer_role_id === 2) return true;
+
+    // Auditor can view non-restricted requests
+    if ($viewer_role_id === 6) return true;
+
+    // Default deny
+    return false;
 }
 
 // Ensure yearly leave caps exist for a given user
