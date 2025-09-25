@@ -72,6 +72,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
+    // Handle user activation
+    if (isset($_POST['admin_activate_user'])) {
+        $user_id = (int)($_POST['user_id'] ?? 0);
+        if ($user_id && $user_id != $user['user_id']) { // Don't allow self-activation via this route
+            try {
+                $stmt = $pdo->prepare("UPDATE users SET active = 1 WHERE user_id = ? AND deleted_at IS NULL");
+                if ($stmt->execute([$user_id])) {
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'User activated successfully.'];
+                } else {
+                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to activate user.'];
+                }
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error activating user: ' . $e->getMessage()];
+            }
+        }
+        header('Location: index.php?action=admin_management');
+        exit;
+    }
+
+    // Handle user delete (soft delete)
+    if (isset($_POST['admin_delete_user'])) {
+        $user_id = (int)($_POST['user_id'] ?? 0);
+        if ($user_id && $user_id != $user['user_id']) { // Don't allow self-delete
+            try {
+                $stmt = $pdo->prepare("UPDATE users SET active = 0, deleted_at = NOW() WHERE user_id = ?");
+                if ($stmt->execute([$user_id])) {
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'User deleted successfully.'];
+                } else {
+                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to delete user.'];
+                }
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error deleting user: ' . $e->getMessage()];
+            }
+        }
+        header('Location: index.php?action=admin_management');
+        exit;
+    }
+
+    // Handle user hard delete (permanent)
+    if (isset($_POST['admin_hard_delete_user'])) {
+        $user_id = (int)($_POST['user_id'] ?? 0);
+        if ($user_id && $user_id != $user['user_id']) { // Don't allow self-delete
+            try {
+                // Only allow hard delete if user is already soft-deleted
+                $check = $pdo->prepare("SELECT deleted_at FROM users WHERE user_id = ?");
+                $check->execute([$user_id]);
+                $deletedAt = $check->fetchColumn();
+                if ($deletedAt) {
+                    $del = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
+                    if ($del->execute([$user_id])) {
+                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User permanently removed.'];
+                    } else {
+                        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to permanently delete user.'];
+                    }
+                } else {
+                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'User must be soft-deleted before permanent removal.'];
+                }
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error hard deleting user: ' . $e->getMessage()];
+            }
+        }
+        header('Location: index.php?action=admin_management');
+        exit;
+    }
+    
     // Handle ED message sending (only ED can send messages)
     if (isset($_POST['admin_send_message']) && $user['role_id'] == 4) {
         $message_user_id = (int)$_POST['message_user_id'];
@@ -211,6 +276,7 @@ try {
             $stmt = $pdo->prepare("SELECT u.*, COALESCE(r.role_name, 'Unknown') as role_name 
                                   FROM users u 
                                   LEFT JOIN roles r ON u.role_id = r.role_id 
+                                  WHERE u.deleted_at IS NULL 
                                   ORDER BY u.fullname LIMIT 100");
         } else {
             // Only users table exists, get users without role names
@@ -226,6 +292,7 @@ try {
                                     ELSE 'Unknown'
                                   END as role_name
                                   FROM users u 
+                                  WHERE u.deleted_at IS NULL 
                                   ORDER BY u.fullname LIMIT 100");
         }
         
@@ -494,11 +561,14 @@ try {
                                     </span>
                                 </td>
                                 <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($u['active'] ?? 1) ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300' 
-                                    ?>">
-                                        <?= ($u['active'] ?? 1) ? 'Active' : 'Inactive' ?>
-                                    </span>
+                                    <?php $isDeleted = !empty($u['deleted_at']); $isActive = (int)($u['active'] ?? 1) === 1; ?>
+                                    <?php if ($isDeleted): ?>
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-300">Deleted</span>
+                                    <?php else: ?>
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium <?= $isActive ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300' ?>">
+                                            <?= $isActive ? 'Active' : 'Inactive' ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="p-4 text-slate-300 text-sm"><?= isset($u['last_login']) ? date('M j, Y', strtotime($u['last_login'])) : 'Never' ?></td>
                                 <td class="p-4 text-slate-300 text-sm"><?= isset($u['created_at']) ? date('M j, Y', strtotime($u['created_at'])) : 'N/A' ?></td>
@@ -510,10 +580,25 @@ try {
                                             📧 Message
                                         </button>
                                         <?php endif; ?>
-                                        <button onclick="deactivateUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
-                                                class="bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1 rounded text-sm hover:bg-red-500/30 transition">
-                                            🚫 Deactivate
-                                        </button>
+                                        <?php if (empty($u['deleted_at'])): ?>
+                                            <?php if ((int)($u['active'] ?? 1) === 1): ?>
+                                                <button onclick="deactivateUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
+                                                        class="bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1 rounded text-sm hover:bg-red-500/30 transition">
+                                                    🚫 Deactivate
+                                                </button>
+                                            <?php else: ?>
+                                                <button onclick="activateUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
+                                                        class="bg-green-500/20 text-green-300 border border-green-500/30 px-3 py-1 rounded text-sm hover:bg-green-500/30 transition">
+                                                    ✅ Activate
+                                                </button>
+                                            <?php endif; ?>
+                                            <button onclick="deleteUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
+                                                    class="bg-gray-500/20 text-gray-300 border border-gray-500/30 px-3 py-1 rounded text-sm hover:bg-gray-500/30 transition">
+                                                🗑️ Delete
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-xs text-gray-400">No actions</span>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -1212,6 +1297,52 @@ try {
                 actionInput.name = 'admin_deactivate_user';
                 actionInput.value = '1';
                 
+                form.appendChild(userIdInput);
+                form.appendChild(actionInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function activateUser(userId, userName) {
+            if(confirm(`Activate user "${userName}" and restore access?`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'index.php?action=admin_management';
+
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'admin_activate_user';
+                actionInput.value = '1';
+
+                form.appendChild(userIdInput);
+                form.appendChild(actionInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteUser(userId, userName) {
+            if(confirm(`Are you sure you want to delete user "${userName}"? This will disable their account (soft delete).`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'index.php?action=admin_management';
+
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'admin_delete_user';
+                actionInput.value = '1';
+
                 form.appendChild(userIdInput);
                 form.appendChild(actionInput);
                 document.body.appendChild(form);

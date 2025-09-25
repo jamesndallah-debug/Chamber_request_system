@@ -36,6 +36,12 @@ switch ($action) {
             $user_data = $userModel->get_user_by_username($username);
 
             if ($user_data) {
+                // Block deactivated or deleted users
+                if ((isset($user_data['active']) && (int)$user_data['active'] === 0) || (!empty($user_data['deleted_at']))) {
+                    $error = "Your account has been deactivated. Please contact the administrator.";
+                    include __DIR__ . '/login.php';
+                    break;
+                }
                 $storedHash = (string)($user_data['password'] ?? '');
                 $passwordMatches = false;
                 if ($storedHash !== '' && substr($storedHash, 0, 4) === '$2y$') {
@@ -54,6 +60,8 @@ switch ($action) {
 
                 if ($passwordMatches) {
                     $_SESSION['user'] = $user_data;
+                    // Record last login timestamp
+                    set_last_login($pdo, (int)$user_data['user_id']);
                     // Ensure yearly caps exist for the authenticated user
                     ensure_leave_caps($pdo, (int)$user_data['user_id'], (int)date('Y'));
                     // Redirect to role-specific dashboard

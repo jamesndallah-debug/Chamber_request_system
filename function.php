@@ -35,6 +35,40 @@ try {
     }
 } catch (Throwable $e) { /* ignore */ }
 
+// Ensure users.active column exists to support activation/deactivation
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'active'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1 AFTER role_id");
+    }
+} catch (Throwable $e) { /* ignore */ }
+
+// Ensure users.last_login column exists
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'last_login'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN last_login DATETIME NULL AFTER active");
+    }
+} catch (Throwable $e) { /* ignore */ }
+
+// Ensure users.deleted_at column exists for soft delete
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'deleted_at'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL AFTER last_login");
+    }
+} catch (Throwable $e) { /* ignore */ }
+
+// Helper: update last_login timestamp
+function set_last_login(PDO $pdo, int $user_id): void {
+    try {
+        $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+    } catch (Throwable $e) {
+        error_log('set_last_login failed: ' . $e->getMessage());
+    }
+}
+
 // Ensure users.profile_image column exists for avatars
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'profile_image'");
