@@ -19,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$error = 'Username already exists.';
 		} else {
 			$hash = password_hash($password, PASSWORD_BCRYPT);
-			$stmt = $pdo->prepare('INSERT INTO users (username, password, fullname, department, role_id) VALUES (?, ?, ?, ?, ?)');
 			if ($stmt->execute([$username, $hash, $fullname, $department, $role_id])) {
 				// Auto login with full DB row (ensures keys like user_id match elsewhere)
 				$newId = (int)$pdo->lastInsertId();
@@ -32,6 +31,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					'department' => $department,
 					'role_id' => $role_id,
 				];
+				// Send welcome email if username looks like an email address
+				if (function_exists('send_email') && is_valid_email($username)) {
+					$appUrl = rtrim(BASE_URL, '/');
+					$subject = 'Welcome to Chamber Request System';
+					$body = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
+						. '<h2 style="margin:0 0 10px 0;">Welcome, ' . htmlspecialchars($fullname, ENT_QUOTES, 'UTF-8') . '!</h2>'
+						. '<p>Your account has been created successfully.</p>'
+						. '<ul style="margin:10px 0 10px 18px;">'
+						. '<li><strong>Username:</strong> ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '</li>'
+						. '</ul>'
+						. '<p>You can sign in anytime here: <a href="' . $appUrl . '/index.php?action=login">' . $appUrl . '</a></p>'
+						. '<p style="margin-top:16px;color:#555;">If you did not request this, please ignore this email.</p>'
+						. '</div>';
+					@send_email($username, $subject, $body);
+				}
 				// Redirect based on role
 				$role = (int)$role_id;
 				$dest = 'dashboard';

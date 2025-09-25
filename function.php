@@ -169,6 +169,39 @@ function e($string) {
     return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
 }
 
+// Simple email validation
+function is_valid_email(string $email): bool {
+    return (bool)filter_var($email, FILTER_VALIDATE_EMAIL);
+}
+
+// Send an email using PHP's mail() function. Falls back gracefully if not configured.
+function send_email(string $to, string $subject, string $message, array $headersExtra = []): bool {
+    if (!is_valid_email($to)) {
+        return false;
+    }
+    $fromEmail = getenv('MAIL_FROM_EMAIL') ?: 'no-reply@localhost';
+    $fromName  = getenv('MAIL_FROM_NAME') ?: 'Chamber Request System';
+
+    $headers = [];
+    $headers[] = 'MIME-Version: 1.0';
+    $headers[] = 'Content-type: text/html; charset=UTF-8';
+    $headers[] = 'From: ' . sprintf('%s <%s>', $fromName, $fromEmail);
+    $headers[] = 'Reply-To: ' . $fromEmail;
+    $headers[] = 'X-Mailer: PHP/' . phpversion();
+    foreach ($headersExtra as $h) {
+        $headers[] = $h;
+    }
+
+    // Use native mail(). On some local dev setups (e.g., Windows), this may need SMTP configured in php.ini.
+    // We fail soft here to avoid blocking registration.
+    try {
+        return @mail($to, $subject, $message, implode("\r\n", $headers));
+    } catch (Throwable $e) {
+        error_log('send_email failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
 // Check if a user can approve a request.
 function can_approve($user_role_id, $request) {
     // Admin can always approve.
