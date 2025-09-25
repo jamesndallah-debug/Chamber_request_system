@@ -309,34 +309,53 @@ switch ($action) {
                         $userDept = $user['department'] ?? '';
                         
                         if ($type === 'TCCIA retirement request') {
-                            // Skip HOD, HRM, Auditor → Finance then ED
+                            // For all applicants: skip HOD, HRM, Auditor → Finance then ED
+                            // Mark skipped roles as approved so they never see these requests
                             $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                             $stmt->execute([$lastId]);
                         } else if ($type === 'Salary advance') {
-                            // Salary advance chain depends on requester:
-                            // - Default (Employee/HOD/Auditor/Admin): HRM (pending) -> Finance (pending) -> ED (pending)
-                            // - HRM requester: Finance (pending) -> ED (pending) [skip HRM]
-                            // - Finance requester: HRM (pending) -> ED (pending) [skip Finance]
-                            // HOD and Auditor stages are always skipped (auto-approved)
-                            if ($userRole === 2) {
-                                // HRM requester: skip HRM stage
-                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                                $stmt->execute([$lastId]);
-                            } else if ($userRole === 5) {
-                                // Finance requester: skip Finance stage
-                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?");
-                                $stmt->execute([$lastId]);
-                            } else {
-                                // Everyone else: HRM then Finance then ED
-                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                                $stmt->execute([$lastId]);
+                            // Salary Advance routing depends on applicant role, but chain is always HRM -> Finance -> ED.
+                            // Ensure HOD and Auditor are skipped (marked approved) so they never see these.
+                            switch ($userRole) {
+                                case 2: // HRM applies: goes to Finance -> ED (HRM step auto-approved)
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
+                                case 5: // Finance applies: goes to HRM -> ED only (Finance auto-approved)
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
+                                case 6: // Internal Auditor applies: goes to HRM -> Finance -> ED (Auditor auto-approved)
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
+                                case 3: // HOD applies: goes to HRM -> Finance -> ED (HOD auto-approved)
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
+                                default: // Employee or others: HRM -> Finance -> ED
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
                             }
                         } else {
                             // Role-based workflow routing
                             switch ($userRole) {
                                 case 1: // Employee
-                                    if (strtolower($userDept) === 'hr and administration' || strtolower($userDept) === 'hr' || strtolower($userDept) === 'human resources') {
-                                        // HR and Administration: HRM → Internal Auditor → Finance → ED
+                                    // Normalize department for robust matching (remove spaces, ampersands, punctuation, lowercase)
+                                    $norm = strtolower(preg_replace('/[^a-z]/i', '', (string)$userDept));
+                                    $hrAliases = [
+                                        'hr',
+                                        'humanresources',
+                                        'hrandadministration',
+                                        'hradministration',
+                                        'hradministration',
+                                        'hradmin',
+                                        'hrandadmin',
+                                        'hradministration',
+                                    ];
+                                    if (in_array($norm, $hrAliases, true)) {
+                                        // HR & Administration: HRM → Internal Auditor → Finance → ED (skip HOD)
                                         $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                                         $stmt->execute([$lastId]);
                                     } else {
@@ -407,14 +426,22 @@ switch ($action) {
             header('Location: index.php?action=dashboard');
             exit;
         }
-        // Enforce visibility rules for special request types
-        if (!can_view_request((int)$user['role_id'], $user, $request)) {
-            // Optionally set a flash message, then redirect
-            $_SESSION['error'] = 'You do not have permission to view this request.';
-            header('Location: index.php?action=dashboard');
-            exit;
+        // Visibility guard for special types
+        $rtype = (string)($request['request_type'] ?? '');
+        $roleId = (int)$user['role_id'];
+        $isOwner = ((int)$request['user_id'] === (int)$user['user_id']);
+        $isAdmin = ($roleId === 7);
+        if (!$isAdmin && !$isOwner) {
+            if ($rtype === 'Salary advance' && !in_array($roleId, [2,5,4], true)) {
+                header('Location: index.php?action=dashboard');
+                exit;
+            }
+            if ($rtype === 'TCCIA retirement request' && !in_array($roleId, [5,4], true)) {
+                header('Location: index.php?action=dashboard');
+                exit;
+            }
         }
-        
+
         include __DIR__ . '/view_request.php';
         break;
 

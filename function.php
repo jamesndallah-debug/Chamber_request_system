@@ -171,93 +171,62 @@ function e($string) {
 
 // Check if a user can approve a request.
 function can_approve($user_role_id, $request) {
-    // Enhanced approval logic with special routing rules
-    $type = (string)($request['request_type'] ?? '');
-
-    // Admin can always approve
+    // Admin can always approve.
     if ((int)$user_role_id === 7) {
         return true;
     }
 
-    // Special workflow: Salary advance => HRM -> Finance -> ED (HOD and Auditor excluded)
+    $type = (string)($request['request_type'] ?? '');
+    $hod = strtolower((string)($request['hod_status'] ?? ''));
+    $hrm = strtolower((string)($request['hrm_status'] ?? ''));
+    $aud = strtolower((string)($request['auditor_status'] ?? ''));
+    $fin = strtolower((string)($request['finance_status'] ?? ''));
+    $ed  = strtolower((string)($request['ed_status'] ?? ''));
+
+    // Special routing: Salary advance => HRM -> Finance -> ED only
     if ($type === 'Salary advance') {
         switch ((int)$user_role_id) {
-            case 2: // HRM
-                return ($request['hrm_status'] ?? null) === 'pending';
-            case 5: // Finance
-                return ($request['finance_status'] ?? null) === 'pending' && ($request['hrm_status'] ?? null) === 'approved';
-            case 4: // ED
-                return ($request['ed_status'] ?? null) === 'pending' && ($request['finance_status'] ?? null) === 'approved';
+            case 3: // HOD never involved
+            case 6: // Auditor never involved
+                return false;
+            case 2: // HRM first
+                return $hrm === 'pending';
+            case 5: // Finance after HRM
+                return $fin === 'pending' && $hrm === 'approved';
+            case 4: // ED after Finance
+                return $ed === 'pending' && $fin === 'approved';
             default:
                 return false;
         }
     }
 
-    // Special workflow: TCCIA retirement request => Finance -> ED only
+    // Special routing: TCCIA retirement request => Finance -> ED only
     if ($type === 'TCCIA retirement request') {
         switch ((int)$user_role_id) {
-            case 5: // Finance
-                return ($request['finance_status'] ?? null) === 'pending';
-            case 4: // ED
-                return ($request['ed_status'] ?? null) === 'pending' && ($request['finance_status'] ?? null) === 'approved';
+            case 5: // Finance first
+                return $fin === 'pending';
+            case 4: // ED after Finance
+                return $ed === 'pending' && $fin === 'approved';
             default:
                 return false;
         }
     }
 
-    // Default workflow: HOD -> HRM -> Auditor -> Finance -> ED
+    // Default workflow: HOD -> HRM -> Internal Auditor -> Finance -> ED
     switch ((int)$user_role_id) {
         case 3: // HOD
-            return ($request['hod_status'] ?? null) === 'pending';
+            return $hod === 'pending';
         case 2: // HRM
-            return ($request['hrm_status'] ?? null) === 'pending' && ($request['hod_status'] ?? null) === 'approved';
+            return $hrm === 'pending' && $hod === 'approved';
         case 6: // Internal Auditor
-            return ($request['auditor_status'] ?? null) === 'pending' && ($request['hrm_status'] ?? null) === 'approved';
+            return $aud === 'pending' && $hrm === 'approved';
         case 5: // Finance
-            return ($request['finance_status'] ?? null) === 'pending' && ($request['auditor_status'] ?? null) === 'approved';
+            return $fin === 'pending' && $aud === 'approved';
         case 4: // ED
-            return ($request['ed_status'] ?? null) === 'pending' && ($request['finance_status'] ?? null) === 'approved';
+            return $ed === 'pending' && $fin === 'approved';
         default:
             return false;
     }
-}
-
-// Visibility helper to enforce who can see which request types
-function can_view_request(int $viewer_role_id, array $viewer_data, array $request): bool {
-    $type = (string)($request['request_type'] ?? '');
-    $owner_id = (int)($request['user_id'] ?? 0);
-    $viewer_id = (int)($viewer_data['user_id'] ?? 0);
-
-    // Admin can view all
-    if ($viewer_role_id === 7) return true;
-    // Owner can view own request
-    if ($viewer_role_id === 1 && $viewer_id === $owner_id) return true;
-
-    // HOD and Internal Auditor cannot see Salary advance or TCCIA retirement
-    if (in_array($viewer_role_id, [3, 6], true) && in_array($type, ['Salary advance', 'TCCIA retirement request'], true)) {
-        return false;
-    }
-    // HRM cannot see TCCIA retirement
-    if ($viewer_role_id === 2 && $type === 'TCCIA retirement request') {
-        return false;
-    }
-
-    // Finance and ED can view all financial requests
-    if (in_array($viewer_role_id, [4, 5], true)) return true;
-
-    // HOD can view department requests except those restricted above
-    if ($viewer_role_id === 3) {
-        return ((string)($viewer_data['department'] ?? '')) === ((string)($request['department'] ?? ''));
-    }
-
-    // HRM can view non-restricted requests
-    if ($viewer_role_id === 2) return true;
-
-    // Auditor can view non-restricted requests
-    if ($viewer_role_id === 6) return true;
-
-    // Default deny
-    return false;
 }
 
 // Ensure yearly leave caps exist for a given user
