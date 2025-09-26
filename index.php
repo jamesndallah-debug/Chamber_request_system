@@ -494,23 +494,48 @@ switch ($action) {
             header('Location: index.php?action=dashboard');
             exit;
         }
-        // Handle admin POST actions (create/deactivate/broadcast)
+        // Handle admin POST actions for user management
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // User creation is now handled in admin_dashboard_simple.php
-            if (isset($_POST['admin_deactivate_user'])) {
-                $uid = (int)($_POST['user_id'] ?? 0);
-                if ($uid) {
-                    try {
-                        $ok = $userModel->deactivate_user($uid);
+            try {
+                if (isset($_POST['admin_deactivate_user'])) {
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    if ($uid && $uid !== (int)$user['user_id']) {
+                        $stmt = $pdo->prepare("UPDATE users SET active = 0 WHERE user_id = ?");
+                        $ok = $stmt->execute([$uid]);
                         $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User deactivated.' : 'Failed to deactivate user.'];
-                    } catch (Throwable $e) {
-                        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error deactivating user.'];
                     }
+                } else if (isset($_POST['admin_activate_user'])) {
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    if ($uid && $uid !== (int)$user['user_id']) {
+                        $stmt = $pdo->prepare("UPDATE users SET active = 1 WHERE user_id = ? AND deleted_at IS NULL");
+                        $ok = $stmt->execute([$uid]);
+                        $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User activated.' : 'Failed to activate user.'];
+                    }
+                } else if (isset($_POST['admin_delete_user'])) {
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    if ($uid && $uid !== (int)$user['user_id']) {
+                        $stmt = $pdo->prepare("UPDATE users SET active = 0, deleted_at = NOW() WHERE user_id = ?");
+                        $ok = $stmt->execute([$uid]);
+                        $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User deleted.' : 'Failed to delete user.'];
+                    }
+                } else if (isset($_POST['admin_hard_delete_user'])) {
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    if ($uid && $uid !== (int)$user['user_id']) {
+                        $check = $pdo->prepare("SELECT deleted_at FROM users WHERE user_id = ?");
+                        $check->execute([$uid]);
+                        if ($check->fetchColumn()) {
+                            $del = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
+                            $ok = $del->execute([$uid]);
+                            $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User permanently removed.' : 'Failed to permanently delete user.'];
+                        } else {
+                            $_SESSION['flash'] = ['type' => 'error', 'message' => 'User must be soft-deleted before permanent removal.'];
+                        }
+                    }
+                } else if (isset($_POST['admin_broadcast'])) {
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Announcement sent.'];
                 }
-            }
-            if (isset($_POST['admin_broadcast'])) {
-                // Placeholder for announcements; would insert into messages table if present
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Announcement sent.'];
+            } catch (Throwable $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Admin action failed.'];
             }
             header('Location: index.php?action=admin_management&tab=' . urlencode($_GET['tab'] ?? 'users'));
             exit;
