@@ -16,6 +16,47 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
+// Ensure users table and required columns exist
+try {
+    // Create users table if it does not exist
+    $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+        user_id INT NOT NULL AUTO_INCREMENT,
+        fullname VARCHAR(255) NOT NULL,
+        username VARCHAR(255) NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        department VARCHAR(100) NOT NULL,
+        role_id INT NOT NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        last_login DATETIME NULL,
+        deleted_at DATETIME NULL,
+        profile_image VARCHAR(255) NULL,
+        google_id VARCHAR(255) NULL UNIQUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id),
+        UNIQUE KEY uniq_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Add any missing columns to existing users table
+    $requiredCols = [
+        'fullname' => "ALTER TABLE users ADD COLUMN fullname VARCHAR(255) NOT NULL AFTER user_id",
+        'username' => "ALTER TABLE users ADD COLUMN username VARCHAR(255) NOT NULL AFTER fullname",
+        'password' => "ALTER TABLE users ADD COLUMN password VARCHAR(255) NOT NULL AFTER username",
+        'department' => "ALTER TABLE users ADD COLUMN department VARCHAR(100) NOT NULL AFTER password",
+        'role_id' => "ALTER TABLE users ADD COLUMN role_id INT NOT NULL AFTER department",
+    ];
+    foreach ($requiredCols as $col => $ddl) {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE '" . $col . "'");
+        if ($colCheck && $colCheck->rowCount() === 0) {
+            $pdo->exec($ddl);
+        }
+    }
+    // Ensure unique index on username
+    $idx = $pdo->query("SHOW INDEX FROM users WHERE Key_name='uniq_username'");
+    if (!$idx || $idx->rowCount() === 0) {
+        $pdo->exec("CREATE UNIQUE INDEX uniq_username ON users (username)");
+    }
+} catch (Throwable $e) { /* ignore */ }
+
 // Ensure requests.details_json column exists to store dynamic form data
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM requests LIKE 'details_json'");
@@ -56,6 +97,14 @@ try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'deleted_at'");
     if ($colCheck && $colCheck->rowCount() === 0) {
         $pdo->exec("ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL AFTER last_login");
+    }
+} catch (Throwable $e) { /* ignore */ }
+
+// Ensure users.created_at column exists
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'created_at'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER deleted_at");
     }
 } catch (Throwable $e) { /* ignore */ }
 
@@ -102,10 +151,12 @@ try {
             (2, 'HRM'),
             (3, 'HOD'),
             (4, 'ED'),
-            (5, 'Finance'),
+            (5, 'Finance Manager'),
             (6, 'Internal Auditor'),
             (7, 'Admin')");
     }
+    // Ensure Finance role label is consistent if roles were seeded before
+    $pdo->exec("UPDATE roles SET role_name='Finance Manager' WHERE role_id=5 AND role_name <> 'Finance Manager'");
 } catch (Throwable $e) { /* ignore */ }
 
 // Ensure request_statuses table exists
@@ -208,6 +259,27 @@ function is_valid_email(string $email): bool {
     return (bool)filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
+// Normalize department string (lowercase, remove non-letters)
+function normalize_department(string $dept): string {
+    return strtolower(preg_replace('/[^a-z]/i', '', $dept));
+}
+
+// Department aliases used across the app
+function department_aliases(): array {
+    return [
+        'hr' => ['hr','humanresources','hrandadministration','hradministration','hradmin','hrandadmin'],
+        'finance' => ['finance','financemanager','financeofficer'],
+        'ia' => ['internalauditor','audit','internalaudit'],
+        'legal' => ['legalofficer','legal'],
+    ];
+}
+
+// Check if a normalized department belongs to a named group
+function is_department(string $normalized, string $group): bool {
+    $aliases = department_aliases();
+    return isset($aliases[$group]) && in_array($normalized, $aliases[$group], true);
+}
+
 // Send an email using PHP's mail() function. Falls back gracefully if not configured.
 function send_email(string $to, string $subject, string $message, array $headersExtra = []): bool {
     if (!is_valid_email($to)) {
@@ -278,6 +350,36 @@ function can_approve($user_role_id, $request) {
                 return false;
         }
     }
+
+    // Department-aware routing for Employee requests
+    // Internal Auditor department employees: Auditor -> HRM -> Finance -> ED (HOD skipped in index.php)
+    try {
+        $applicantUserId = (int)($request['user_id'] ?? 0);
+        if ($applicantUserId > 0) {
+            global $pdo;
+            if ($pdo instanceof PDO) {
+                $q = $pdo->prepare("SELECT department FROM users WHERE user_id = ? LIMIT 1");
+                $q->execute([$applicantUserId]);
+                $dept = (string)($q->fetchColumn());
+                $normDept = strtolower(preg_replace('/[^a-z]/i', '', $dept));
+                $iaAliases = ['internalauditor','audit','internalaudit'];
+                if (in_array($normDept, $iaAliases, true)) {
+                    switch ((int)$user_role_id) {
+                        case 6: // Internal Auditor first
+                            return $aud === 'pending';
+                        case 2: // HRM after Auditor
+                            return $hrm === 'pending' && $aud === 'approved';
+                        case 5: // Finance after HRM
+                            return $fin === 'pending' && $hrm === 'approved';
+                        case 4: // ED after Finance
+                            return $ed === 'pending' && $fin === 'approved';
+                        default:
+                            return false;
+                    }
+                }
+            }
+        }
+    } catch (Throwable $e) { /* ignore and fall back to default */ }
 
     // Default workflow: HOD -> HRM -> Internal Auditor -> Finance -> ED
     switch ((int)$user_role_id) {

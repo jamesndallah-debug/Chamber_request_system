@@ -22,18 +22,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $token = bin2hex(random_bytes(32));
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
             
-            // Store reset token in database (you'll need to create this table)
+            // Store reset token in database
             try {
                 $stmt = $pdo->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token = ?, expires_at = ?');
                 $stmt->execute([$user['user_id'], $token, $expires, $token, $expires]);
                 
-                // In a real application, you would send an email here
-                // For now, we'll just show a success message
-                $message = 'Password reset instructions have been sent to your email address.';
-                
-                // You can uncomment this for testing to see the reset link
-                // $resetLink = "http://localhost/chamber_request_system/reset_password.php?token=" . $token;
-                // $message .= " Reset link: " . $resetLink;
+                // Send the reset email
+                $resetLink = rtrim(BASE_URL, '/') . '/reset_password.php?token=' . urlencode($token);
+                $subject = 'Reset your password';
+                $html = '<p>Hello ' . e($user['fullname'] ?? 'User') . ',</p>'
+                    . '<p>We received a request to reset your password. Click the link below to set a new password. This link will expire in 1 hour.</p>'
+                    . '<p><a href="' . e($resetLink) . '" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;">Reset Password</a></p>'
+                    . '<p>Or copy and paste this URL into your browser:<br>' . e($resetLink) . '</p>'
+                    . '<p>If you did not request this, you can ignore this email.</p>'
+                    . '<p>Regards,<br>Chamber Request System</p>';
+
+                // Attempt to send; do not reveal delivery status to the user for security
+                @send_email($email, $subject, $html);
+
+                // Always show neutral success message
+                $message = 'If an account with that email exists, password reset instructions have been sent.';
                 
             } catch (Exception $e) {
                 $error = 'An error occurred. Please try again later.';

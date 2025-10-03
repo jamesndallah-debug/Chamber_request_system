@@ -353,19 +353,33 @@ switch ($action) {
                                     // Normalize department for robust matching (remove spaces, ampersands, punctuation, lowercase)
                                     $norm = strtolower(preg_replace('/[^a-z]/i', '', (string)$userDept));
                                     $hrAliases = [
-                                        'hr',
-                                        'humanresources',
-                                        'hrandadministration',
-                                        'hradministration',
-                                        'hradministration',
-                                        'hradmin',
-                                        'hrandadmin',
-                                        'hradministration',
+                                        'hr', 'humanresources', 'hrandadministration', 'hradministration', 'hradmin', 'hrandadmin'
                                     ];
+                                    $financeAliases = [
+                                        'finance', 'financemanager', 'financeofficer'
+                                    ];
+                                    $iaAliases = [
+                                        'internalauditor', 'audit', 'internalaudit'
+                                    ];
+                                    $legalAliases = [
+                                        'legalofficer', 'legal'
+                                    ];
+
                                     if (in_array($norm, $hrAliases, true)) {
                                         // HR & Administration: HRM → Internal Auditor → Finance → ED (skip HOD)
                                         $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                                         $stmt->execute([$lastId]);
+                                    } else if (in_array($norm, $financeAliases, true)) {
+                                        // Finance employees: HRM → Internal Auditor → Finance → ED (skip HOD)
+                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                        $stmt->execute([$lastId]);
+                                    } else if (in_array($norm, $iaAliases, true)) {
+                                        // Internal Auditor employees: Auditor → HRM → Finance → ED (skip HOD)
+                                        // We still mark HOD as approved to skip, first approver will be Auditor handled in can_approve()
+                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                        $stmt->execute([$lastId]);
+                                    } else if (in_array($norm, $legalAliases, true)) {
+                                        // Legal Officer employees: include HOD first then default chain → leave default (all pending)
                                     } else {
                                         // Other employees: Default workflow (HOD → HRM → Internal Auditor → Finance → ED)
                                         // Leave default status (all pending)

@@ -450,7 +450,7 @@ foreach ($vouchers as $voucher) {
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500">Prepared By</p>
-                                            <p class="text-gray-700"><?= e($voucher['prepared_by_name'] ?: 'Finance Officer') ?></p>
+                                            <p class="text-gray-700"><?= e($voucher['prepared_by_name'] ?: 'Finance Manager') ?></p>
                                         </div>
                                     </div>
                                     <div class="flex justify-between items-center border-t border-gray-200 pt-3 mt-2">

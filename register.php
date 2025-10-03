@@ -3,23 +3,29 @@ require_once __DIR__ . '/function.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$username = trim($_POST['username'] ?? '');
-	$password = $_POST['password'] ?? '';
-	$fullname = trim($_POST['fullname'] ?? '');
-	$department = $_POST['department'] ?? '';
-	$role_id = (int)($_POST['role_id'] ?? 1);
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    $fullname = trim($_POST['fullname'] ?? '');
+    $department = $_POST['department'] ?? '';
+    $role_id = (int)($_POST['role_id'] ?? 1);
 
-	if ($username === '' || $password === '' || $fullname === '' || $department === '' || $role_id === 0) {
-		$error = 'Please fill all fields.';
-	} else {
+    if ($username === '' || $password === '' || $confirm_password === '' || $fullname === '' || $department === '' || $role_id === 0) {
+        $error = 'Please fill all fields.';
+    } elseif ($password !== $confirm_password) {
+        $error = 'Passwords do not match.';
+    } elseif (strlen($password) < 8) {
+        $error = 'Password must be at least 8 characters long.';
+    } else {
 		// Check existing user
 		$exists = $pdo->prepare('SELECT 1 FROM users WHERE username = ?');
 		$exists->execute([$username]);
 		if ($exists->fetchColumn()) {
 			$error = 'Username already exists.';
 		} else {
-			$hash = password_hash($password, PASSWORD_BCRYPT);
-			if ($stmt->execute([$username, $hash, $fullname, $department, $role_id])) {
+            $hash = password_hash($password, PASSWORD_BCRYPT);
+            $stmt = $pdo->prepare('INSERT INTO users (fullname, username, password, department, role_id, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
+            if ($stmt->execute([$fullname, $username, $hash, $department, $role_id])) {
 				// Auto login with full DB row (ensures keys like user_id match elsewhere)
 				$newId = (int)$pdo->lastInsertId();
 				$fetch = $pdo->prepare('SELECT * FROM users WHERE user_id = ?');
@@ -34,7 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (function_exists('send_email') && is_valid_email($username)) {
                     $appUrl = rtrim(BASE_URL, '/');
                     $subject = 'Welcome to Chamber Request System';
-                    $body = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;"'
+                    // Fix malformed HTML: add missing closing '>' on opening div tag
+                    $body = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
                           . '<h2 style="margin:0 0 10px 0;">Welcome, ' . htmlspecialchars($fullname, ENT_QUOTES, 'UTF-8') . '!</h2>'
                           . '<p>Your account has been created successfully.</p>'
                           . '<ul style="margin:10px 0 10px 18px;">'
@@ -52,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $adminStmt->execute();
                     $admins = $adminStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-                    $roleNames = [1=>'Employee',2=>'HRM',3=>'HOD',4=>'ED',5=>'Finance',6=>'Internal Auditor',7=>'Admin'];
+                    $roleNames = [1=>'Employee',2=>'HRM',3=>'HOD',4=>'ED',5=>'Finance Manager',6=>'Internal Auditor',7=>'Admin'];
                     $newRoleName = $roleNames[$role_id] ?? ('Role #' . (int)$role_id);
                     $title = 'New user registered';
                     $msg = sprintf('%s (%s) joined as %s in %s.', $fullname, $username, $newRoleName, $department);
@@ -588,7 +595,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 							<option value="3">👔 Head of Department (HOD)</option>
 							<option value="2">👥 Human Resource Manager (HRM)</option>
 							<option value="6">🔍 Internal Auditor</option>
-							<option value="5">💰 Finance Officer</option>
+							<option value="5">💰 Finance Manager</option>
 							<option value="4">🎯 Executive Director</option>
 							<option value="7">⚙️ System Administrator</option>
 						</select>
