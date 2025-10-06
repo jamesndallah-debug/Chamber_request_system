@@ -244,6 +244,21 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 } catch (Throwable $e) { /* ignore */ }
 
+// Ensure password_resets table exists for forgot/reset password flow
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        token VARCHAR(255) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY token (token),
+        UNIQUE KEY uniq_user (user_id),
+        CONSTRAINT password_resets_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+} catch (Throwable $e) { /* ignore */ }
+
 // Function to get the current logged-in user from the session.
 function current_user() {
     return $_SESSION['user'] ?? null;
@@ -280,7 +295,7 @@ function is_department(string $normalized, string $group): bool {
     return isset($aliases[$group]) && in_array($normalized, $aliases[$group], true);
 }
 
-// Send an email using PHP's mail() function. Falls back gracefully if not configured.
+// Send an email. If SMTP env is configured, use direct SMTP; otherwise fall back to PHP mail().
 function send_email(string $to, string $subject, string $message, array $headersExtra = []): bool {
     if (!is_valid_email($to)) {
         return false;
@@ -288,24 +303,150 @@ function send_email(string $to, string $subject, string $message, array $headers
     $fromEmail = getenv('MAIL_FROM_EMAIL') ?: 'no-reply@localhost';
     $fromName  = getenv('MAIL_FROM_NAME') ?: 'Chamber Request System';
 
+    // Build standard headers
     $headers = [];
     $headers[] = 'MIME-Version: 1.0';
-    $headers[] = 'Content-type: text/html; charset=UTF-8';
+    $headers[] = 'Content-Type: text/html; charset=UTF-8';
     $headers[] = 'From: ' . sprintf('%s <%s>', $fromName, $fromEmail);
     $headers[] = 'Reply-To: ' . $fromEmail;
     $headers[] = 'X-Mailer: PHP/' . phpversion();
-    foreach ($headersExtra as $h) {
-        $headers[] = $h;
+    foreach ($headersExtra as $h) { $headers[] = $h; }
+
+    // Prefer SMTP if configured in .env
+    $smtpHost = getenv('SMTP_HOST') ?: '';
+    $smtpPort = (int)(getenv('SMTP_PORT') ?: 0);
+    $smtpUser = getenv('SMTP_USER') ?: '';
+    $smtpPass = getenv('SMTP_PASS') ?: '';
+    $smtpSecure = strtolower((string)(getenv('SMTP_SECURE') ?: ''));// '', 'ssl'
+
+    if ($smtpHost && $smtpPort > 0) {
+        try {
+            return smtp_send_mail([
+                'host' => $smtpHost,
+                'port' => $smtpPort,
+                'secure' => $smtpSecure, // '' or 'ssl'
+                'username' => $smtpUser,
+                'password' => $smtpPass,
+                'from_email' => $fromEmail,
+                'from_name' => $fromName,
+            ], $to, $subject, $message, $headers);
+        } catch (Throwable $e) {
+            error_log('send_email SMTP fallback to mail(): ' . $e->getMessage());
+            // continue to mail() fallback
+        }
     }
 
-    // Use native mail(). On some local dev setups (e.g., Windows), this may need SMTP configured in php.ini.
-    // We fail soft here to avoid blocking registration.
+    // Fallback: native mail() (works when sendmail/SMTP is configured in php.ini)
     try {
+        // On Windows, optionally set SMTP ini dynamically if provided without auth
+        if ($smtpHost && !$smtpUser && !$smtpPass) {
+            @ini_set('SMTP', $smtpHost);
+            if ($smtpPort > 0) { @ini_set('smtp_port', (string)$smtpPort); }
+            if ($fromEmail) { @ini_set('sendmail_from', $fromEmail); }
+        }
         return @mail($to, $subject, $message, implode("\r\n", $headers));
     } catch (Throwable $e) {
         error_log('send_email failed: ' . $e->getMessage());
         return false;
     }
+}
+
+// Minimal SMTP client (AUTH LOGIN, optional SSL on port 465). STARTTLS is not implemented.
+// This is suitable for servers allowing SSL (implicit TLS) or plain SMTP without STARTTLS.
+function smtp_send_mail(array $config, string $to, string $subject, string $htmlBody, array $headers): bool {
+    $host = (string)($config['host'] ?? '');
+    $port = (int)($config['port'] ?? 0);
+    $secure = strtolower((string)($config['secure'] ?? ''));
+    $username = (string)($config['username'] ?? '');
+    $password = (string)($config['password'] ?? '');
+    $fromEmail = (string)($config['from_email'] ?? 'no-reply@localhost');
+    $fromName  = (string)($config['from_name'] ?? 'Chamber Request System');
+
+    $transport = $secure === 'ssl' ? 'ssl://' . $host : $host;
+    $timeout = 15;
+    $errno = 0; $errstr = '';
+    $fp = @fsockopen($transport, $port, $errno, $errstr, $timeout);
+    if (!$fp) {
+        throw new RuntimeException('SMTP connect failed: ' . $errno . ' ' . $errstr);
+    }
+    stream_set_timeout($fp, $timeout);
+
+    $expect = function($code) use ($fp) {
+        $resp = '';
+        while (!feof($fp)) {
+            $line = fgets($fp, 515);
+            if ($line === false) break;
+            $resp .= $line;
+            if (isset($line[3]) && $line[3] === ' ') break; // last line of response
+        }
+        if (strpos($resp, (string)$code) !== 0) {
+            throw new RuntimeException('SMTP unexpected response, expected ' . $code . ', got: ' . trim($resp));
+        }
+        return $resp;
+    };
+    $send = function($cmd) use ($fp) {
+        fwrite($fp, $cmd . "\r\n");
+    };
+
+    // Greet
+    $expect(220);
+    $send('EHLO ' . gethostname());
+    $resp = $expect(250);
+
+    // AUTH if credentials provided
+    if ($username !== '' && $password !== '') {
+        $send('AUTH LOGIN');
+        $expect(334);
+        $send(base64_encode($username));
+        $expect(334);
+        $send(base64_encode($password));
+        $expect(235);
+    }
+
+    // MAIL FROM and RCPT TO
+    $send('MAIL FROM: <' . $fromEmail . '>');
+    $expect(250);
+    $send('RCPT TO: <' . $to . '>');
+    $expect(250);
+
+    // DATA
+    $send('DATA');
+    $expect(354);
+
+    // Build full MIME message
+    $date = date('r');
+    $messageId = '<' . bin2hex(random_bytes(16)) . '@' . parse_url(BASE_URL, PHP_URL_HOST) . '>';
+    $subjectEncoded = encode_mime_header($subject);
+
+    $allHeaders = array_merge([
+        'Date: ' . $date,
+        'Message-ID: ' . $messageId,
+        'Subject: ' . $subjectEncoded,
+        'To: ' . $to,
+    ], $headers);
+
+    $data = implode("\r\n", $allHeaders) . "\r\n\r\n" . $htmlBody . "\r\n.";
+    // Send data lines, dot-stuffing if needed
+    foreach (preg_split("/(\r\n|\r|\n)/", $data) as $line) {
+        if (strlen($line) > 0 && $line[0] === '.') {
+            $line = '.' . $line;
+        }
+        fwrite($fp, $line . "\r\n");
+    }
+    $expect(250);
+
+    // Quit
+    $send('QUIT');
+    fclose($fp);
+    return true;
+}
+
+// Encode header to handle UTF-8 safely
+function encode_mime_header(string $text): string {
+    if (preg_match('/[\x80-\xFF]/', $text)) {
+        return '=?UTF-8?B?' . base64_encode($text) . '?=';
+    }
+    return $text;
 }
 
 // Check if a user can approve a request.

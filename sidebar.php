@@ -20,6 +20,15 @@ $isActive = function($actions) use ($current_action) {
             </svg>
             <span>Dashboard</span>
         </a>
+        <?php if (isset($user) && (int)$user['role_id'] === 7): ?>
+        <a href="index.php?action=admin_requests" class="flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors
+            <?= $isActive(['admin_requests']) ? 'bg-blue-600 text-white' : 'hover:bg-blue-600/20 text-white/90' ?>">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h13M8 12h13M8 17h13M3 7h.01M3 12h.01M3 17h.01" />
+            </svg>
+            <span>My Requests</span>
+        </a>
+        <?php endif; ?>
         <a href="index.php?action=new_request" class="flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors
             <?= $current_action === 'new_request' ? 'bg-blue-600 text-white' : 'hover:bg-blue-600/20 text-white/90' ?>">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

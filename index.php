@@ -228,6 +228,17 @@ switch ($action) {
     case 'ed_dashboard':
         include __DIR__ . '/dashboard.php';
         break;
+    
+    case 'admin_requests':
+        // Allow Admin to access the standard dashboard focused on their own requests
+        if ($user && (int)$user['role_id'] === 7) {
+            // Hint the dashboard to open My Requests tab by default
+            $force_my_requests_tab = true;
+            include __DIR__ . '/dashboard.php';
+            break;
+        }
+        header('Location: index.php?action=dashboard');
+        exit;
         
     case 'vouchers':
         // Only allow Finance and ED to access vouchers page
