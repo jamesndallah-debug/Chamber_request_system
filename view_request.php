@@ -342,6 +342,13 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </h1>
             <div class="no-print flex items-center gap-4">
                 <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"><span>←</span> Back to Dashboard</a>
+                <?php $isAdmin = ((int)$user['role_id'] === 7); ?>
+                <?php if ($isAdmin): ?>
+                <form method="POST" action="index.php?action=delete_request" onsubmit="return confirm('Delete this request permanently? This cannot be undone.');">
+                    <input type="hidden" name="id" value="<?= e($request['request_id']) ?>" />
+                    <button type="submit" class="px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all" style="background:linear-gradient(90deg,#ef4444,#b91c1c); color:#fff;">🗑️ Delete</button>
+                </form>
+                <?php endif; ?>
                 <button onclick="window.print()" class="btn-gradient px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all">🖨️ Print</button>
             </div>
         </header>

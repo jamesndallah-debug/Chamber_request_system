@@ -169,6 +169,66 @@ switch ($action) {
         header('Location: index.php?action=dashboard');
         exit;
 
+    case 'delete_request':
+        // Allow only POST
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$user) {
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        $rid = (int)($_POST['id'] ?? 0);
+        if ($rid <= 0) {
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        // Fetch request to verify ownership and existence
+        $req = $requestModel->get_request_by_id($rid);
+        if (!$req) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Request not found.'];
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        $isAdmin = ((int)$user['role_id'] === 7);
+        if (!$isAdmin) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Only administrators can delete requests.'];
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        // Attempt to delete dependent data first (best-effort)
+        try {
+            // Delete related vouchers if table exists
+            $chk = $pdo->prepare("SHOW TABLES LIKE 'vouchers'");
+            $chk->execute();
+            if ($chk->fetchColumn()) {
+                $pdo->prepare("DELETE FROM vouchers WHERE request_id = ?")->execute([$rid]);
+            }
+        } catch (Throwable $e) { /* ignore */ }
+        try {
+            // Delete related messages if table exists
+            $chk2 = $pdo->prepare("SHOW TABLES LIKE 'request_messages'");
+            $chk2->execute();
+            if ($chk2->fetchColumn()) {
+                $pdo->prepare("DELETE FROM request_messages WHERE request_id = ?")->execute([$rid]);
+            }
+        } catch (Throwable $e) { /* ignore */ }
+        try {
+            // Delete related notifications
+            $chk3 = $pdo->prepare("SHOW TABLES LIKE 'notifications'");
+            $chk3->execute();
+            if ($chk3->fetchColumn()) {
+                $pdo->prepare("DELETE FROM notifications WHERE request_id = ?")->execute([$rid]);
+            }
+        } catch (Throwable $e) { /* ignore */ }
+        // Finally delete the request
+        try {
+            $ok = $pdo->prepare("DELETE FROM requests WHERE request_id = ?")->execute([$rid]);
+            $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'Request deleted.' : 'Failed to delete request.'];
+        } catch (Throwable $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to delete request.'];
+        }
+        // Redirect: admin stays on dashboard; owner to dashboard
+        header('Location: index.php?action=dashboard');
+        exit;
+
     case 'mark_notification_read':
         if ($user) {
             $nid = (int)($_GET['id'] ?? 0);
