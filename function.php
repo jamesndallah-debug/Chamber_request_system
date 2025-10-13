@@ -493,7 +493,8 @@ function can_approve($user_role_id, $request) {
     }
 
     // Department-aware routing for Employee requests
-    // Internal Auditor department employees: Auditor -> HRM -> Finance -> ED (HOD skipped in index.php)
+    // HR & Administration departments: HRM -> Internal Auditor -> Finance -> ED (skip HOD)
+    // Internal Auditor department: Auditor -> HRM -> Finance -> ED (skip HOD)
     try {
         $applicantUserId = (int)($request['user_id'] ?? 0);
         if ($applicantUserId > 0) {
@@ -503,6 +504,26 @@ function can_approve($user_role_id, $request) {
                 $q->execute([$applicantUserId]);
                 $dept = (string)($q->fetchColumn());
                 $normDept = strtolower(preg_replace('/[^a-z]/i', '', $dept));
+
+                // Match HR departments and Administration explicitly
+                $isHrDept = is_department($normDept, 'hr');
+                $isAdminDept = in_array($normDept, ['admin','administration'], true);
+                if ($isHrDept || $isAdminDept) {
+                    switch ((int)$user_role_id) {
+                        case 2: // HRM first
+                            return $hrm === 'pending';
+                        case 6: // Internal Auditor after HRM
+                            return $aud === 'pending' && $hrm === 'approved';
+                        case 5: // Finance after IA
+                            return $fin === 'pending' && $aud === 'approved';
+                        case 4: // ED after Finance
+                            return $ed === 'pending' && $fin === 'approved';
+                        default:
+                            return false; // HOD and others not in this route
+                    }
+                }
+
+                // Internal Auditor department employees: Auditor -> HRM -> Finance -> ED
                 $iaAliases = ['internalauditor','audit','internalaudit'];
                 if (in_array($normDept, $iaAliases, true)) {
                     switch ((int)$user_role_id) {

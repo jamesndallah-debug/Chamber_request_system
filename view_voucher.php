@@ -378,7 +378,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
                     <?php endif; ?>
         
                     <?php if ($request): ?>
-                    <div class="voucher-card mb-6">
+                    <div class="voucher-card mb-6 related-request-section">
                         <div class="section-header">
                             <i class="fas fa-link text-xl"></i>
                             Related Request Information
@@ -417,10 +417,14 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
                     <?php endif; ?>
         
         <!-- Voucher Details -->
-        <?= render_voucher_details($voucher, $can_approve) ?>
+        <div class="voucher-container">
+            <?= render_voucher_details($voucher, $can_approve) ?>
+        </div>
         
                     <!-- Voucher Messages -->
-                    <?= render_voucher_messages($voucher_id) ?>
+                    <div class="voucher-messages-section">
+                        <?= render_voucher_messages($voucher_id) ?>
+                    </div>
                 </div>
             </main>
         </div>
@@ -437,6 +441,10 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
     aside, header, footer, nav {
         display: none !important;
     }
+    /* Hide the on-page header bar in print (title and voucher-type badge) */
+    .page-header { display: none !important; }
+    /* Also hide related request card and alerts in print */
+    .related-request-section, .alert { display: none !important; }
     
     /* Reset body and main container */
     body {
@@ -457,7 +465,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
     /* Voucher container styling */
     .voucher-container {
         border: 2px solid #000;
-        padding: 20px;
+        padding: 12px;
         max-width: 100%;
         margin: 0 auto;
         box-shadow: none !important;
@@ -473,18 +481,35 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
     h1, h2 {
         color: #000 !important;
     }
-    
-    /* Add TCCIA logo or header */
-    .voucher-container:before {
-        content: "TANZANIA CHAMBER OF COMMERCE, INDUSTRY AND AGRICULTURE";
-        display: block;
-        text-align: center;
-        font-weight: bold;
-        font-size: 16pt;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #000;
-        padding-bottom: 15px;
+
+    /* Hide voucher messages in print */
+    .voucher-messages-section { display: none !important; }
+
+    /* Reduce internal paddings to fit one page */
+    .section-content { padding: 8px !important; }
+    .info-grid { gap: 8px !important; margin-bottom: 8px !important; }
+    .info-item { padding: 8px !important; }
+    .voucher-card { margin-bottom: 8px !important; }
+
+    /* Voucher: force two-column layout (left and right) in print */
+    .voucher-container { font-size: 11pt; }
+    .voucher-container .info-grid,
+    .voucher-container .grid,
+    .voucher-container .md\:grid-cols-2,
+    .voucher-container .md\:grid-cols-3 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        column-gap: 12px !important;
+        row-gap: 8px !important;
+        width: 100% !important;
     }
+    .voucher-container .info-item,
+    .voucher-container .section-content > * {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    /* Remove CSS-injected TCCIA heading to prevent duplicates */
+    .voucher-container:before { content: none !important; display: none !important; }
     
     /* Add voucher number watermark */
     .voucher-container:after {
@@ -584,49 +609,13 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
     
     // Function for printing voucher
     function printVoucher() {
-        // Add current date to the printed voucher
-        const printDate = document.createElement('div');
-        printDate.className = 'print-date';
-        printDate.innerHTML = '<p><strong>Printed on:</strong> ' + new Date().toLocaleDateString() + '</p>';
-        document.querySelector('.voucher-container').appendChild(printDate);
-        
-        // Add signature lines if they don't exist
-        if (!document.querySelector('.signature-section')) {
-            const sigSection = document.createElement('div');
-            sigSection.className = 'signature-section approval-info';
-            sigSection.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <div class="signature-line"></div>
-                        <p>Prepared by</p>
-                    </div>
-                    <div>
-                        <div class="signature-line"></div>
-                        <p>Approved by (Finance)</p>
-                    </div>
-                    <div>
-                        <div class="signature-line"></div>
-                        <p>Approved by (ED)</p>
-                    </div>
-                </div>
-            `;
-            document.querySelector('.voucher-container').appendChild(sigSection);
+        // Ensure voucher ID attribute is set for watermark
+        const voucherContainer = document.querySelector('.voucher-container');
+        if (voucherContainer && !voucherContainer.hasAttribute('data-voucher-id')) {
+            voucherContainer.setAttribute('data-voucher-id', '<?= $voucher["voucher_id"] ?>');
         }
-        
-        // Set voucher ID for watermark
-         const voucherContainer = document.querySelector('.voucher-container');
-         if (voucherContainer && !voucherContainer.hasAttribute('data-voucher-id')) {
-             voucherContainer.setAttribute('data-voucher-id', '<?= $voucher["voucher_id"] ?>');
-         }
-        
-        // Print the document
+        // Print without adding extra elements to keep within one A4 page
         window.print();
-        
-        // Remove the elements we added for printing
-        setTimeout(() => {
-            document.querySelector('.print-date')?.remove();
-            document.querySelector('.signature-section')?.remove();
-        }, 1000);
     }
 </script>
 </body>

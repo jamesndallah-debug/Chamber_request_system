@@ -65,15 +65,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_msg']) && isse
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_msg']) && isset($user)) {
     $content = trim($_POST['content'] ?? '');
     $to = !empty($_POST['recipient_user_id']) ? (int)$_POST['recipient_user_id'] : null;
-    
-    // Only ED can send targeted messages, others can only send public messages
-    if ((int)$user['role_id'] !== 4 && $to !== null) {
-        $to = null; // Force public message for non-ED users
+
+    // Routing rules:
+    // - ED (role_id=4) may target a specific user via select (keep provided $to, or null for public)
+    // - Non-ED messages are always private to ED (auto-route to ED)
+    if ((int)$user['role_id'] !== 4) {
+        try {
+            $q = $pdo->prepare("SELECT user_id FROM users WHERE role_id = 4 LIMIT 1");
+            $q->execute();
+            $ed_user_id = (int)$q->fetchColumn();
+            if ($ed_user_id > 0) {
+                $to = $ed_user_id; // force private to ED
+            } else {
+                $to = null; // fallback to public if no ED defined
+            }
+        } catch (Throwable $e) {
+            $to = null; // safe fallback
+        }
     }
-    
+
     if ($content !== '') {
+        // Insert the message
         $stmt = $pdo->prepare("INSERT INTO request_messages (request_id, sender_user_id, recipient_user_id, content) VALUES (?, ?, ?, ?)");
         $stmt->execute([$request['request_id'], $user['user_id'], $to, $content]);
+
+        // Create notification if it's a targeted (private) message
+        if (!empty($to)) {
+            try {
+                $title = 'New message on Request #' . (int)$request['request_id'];
+                $preview = mb_substr($content, 0, 120);
+                $n = $pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                $n->execute([$to, $title, $preview, (int)$request['request_id']]);
+            } catch (Throwable $e) {
+                // ignore notification failures
+            }
+        }
+
         header('Location: index.php?action=view_request&id=' . urlencode($request['request_id']));
         exit;
     }
@@ -309,6 +336,30 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
             font-weight: 600;
             letter-spacing: 0.01em;
         }
+        
+        /* Print layout for A4 and top-aligned content */
+        @media print {
+            /* Page setup */
+            @page { size: A4; margin: 1.5cm; }
+            html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; }
+            aside, header, footer, nav { display: none !important; }
+            main { padding: 0 !important; margin: 0 !important; }
+
+            /* Container sizing */
+            .print-container { box-shadow: none !important; background: #fff !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+
+            /* Hide interactive sections */
+            .messages-section { display: none !important; }
+            form, textarea, select, button { display: none !important; }
+
+            /* Tighten vertical rhythm to better fit A4 */
+            h1, h2, h3 { margin: 0 0 8px 0 !important; }
+            .mb-8 { margin-bottom: 10px !important; }
+            .p-8, .p-5 { padding: 0 !important; }
+
+            /* Avoid unexpected page breaks inside key blocks */
+            .border, .rounded-2xl, .shadow-xl, .shadow-sm { page-break-inside: avoid; }
+        }
     </style>
     <?php
         $type = (string)($request['request_type'] ?? '');
@@ -357,7 +408,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="relative">
                 <div aria-hidden="true" class="orb-bg" style="background:radial-gradient(closest-side,#0b5ed7,transparent 70%),radial-gradient(closest-side,#d4af37,transparent 70%) 70% 10%/40% 40% no-repeat,radial-gradient(closest-side,#16a34a,transparent 70%) 30% 90%/35% 35% no-repeat;"></div>
             </div>
-            <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl ring-1 ring-black/5 max-w-5xl mx-auto">
+            <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl ring-1 ring-black/5 max-w-5xl mx-auto print-container">
                 <div class="mb-8 border-b border-gray-200 pb-6">
                     <h2 class="text-xl font-bold mb-4 text-gray-800">Request Information</h2>
                     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -419,7 +470,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
 
                 <?php if (can_approve($user['role_id'], $request)): ?>
-                    <div class="mb-8">
+                    <div class="mb-8 no-print">
                         <h2 class="text-xl font-bold mb-4 text-gray-800">Request Action</h2>
                         <div class="bg-blue-50/50 p-5 rounded-lg shadow-sm border border-blue-100">
                             <form method="POST" action="index.php?action=process_request">
@@ -467,7 +518,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
 
                 <!-- Messages thread: ED can remark to specific user; all can reply -->
-                <div class="mb-8">
+                <div class="mb-8 messages-section">
                     <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
@@ -568,23 +619,70 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <select name="recipient_user_id" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-base font-semibold text-gray-900">
                                                 <option value="" class="font-semibold">Everyone (Public Message)</option>
                                                 <?php 
-                                                // Get the requester
-                                                $requester_id = $request['user_id'];
-                                                $stmt = $pdo->prepare("SELECT user_id, fullname, role_id FROM users WHERE user_id = ?");
-                                                $stmt->execute([$requester_id]);
-                                                $requester = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                // Build allowed recipients for ED per business rules
+                                                $requester_id = (int)$request['user_id'];
+                                                $rq = $pdo->prepare("SELECT user_id, fullname, role_id, department FROM users WHERE user_id = ?");
+                                                $rq->execute([$requester_id]);
+                                                $requester = $rq->fetch(PDO::FETCH_ASSOC) ?: null;
+
+                                                $added = [];
+                                                $addOption = function($uid, $name, $label) use (&$added) {
+                                                    $uid = (int)$uid; if ($uid <= 0) return; if (isset($added[$uid])) return; $added[$uid] = true;
+                                                    echo "<option value=\"" . e($uid) . "\" class=\"font-semibold\">" . e($name) . (!empty($label) ? " (" . e($label) . ")" : "") . "</option>";
+                                                };
+
                                                 if ($requester) {
-                                                    echo "<option value=\"" . e($requester['user_id']) . "\" class=\"font-semibold\">" . e($requester['fullname']) . " (Requester)</option>";
-                                                }
-                                                
-                                                // Get users by roles
-                                                $roles_to_fetch = [2 => 'HRM', 3 => 'HOD', 5 => 'Finance', 6 => 'Internal Auditor'];
-                                                foreach ($roles_to_fetch as $role_id => $role_label) {
-                                                    $stmt = $pdo->prepare("SELECT user_id, fullname FROM users WHERE role_id = ?");
-                                                    $stmt->execute([$role_id]);
-                                                    $role_users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                                                    foreach ($role_users as $role_user) {
-                                                        echo "<option value=\"" . e($role_user['user_id']) . "\" class=\"font-semibold\">" . e($role_user['fullname']) . " (" . e($role_label) . ")</option>";
+                                                    $reqRole = (int)$requester['role_id'];
+                                                    $dept = strtolower(preg_replace('/[^a-z]/i','', (string)$requester['department']));
+
+                                                    // Always include requester
+                                                    $addOption($requester['user_id'], $requester['fullname'], 'Requester');
+
+                                                    // Helper loaders
+                                                    $loadByRole = function($roleId) use ($pdo) {
+                                                        $st = $pdo->prepare("SELECT user_id, fullname FROM users WHERE role_id = ?");
+                                                        $st->execute([(int)$roleId]);
+                                                        return $st->fetchAll(PDO::FETCH_ASSOC);
+                                                    };
+
+                                                    $includeHOD = function() use ($pdo, $requester, $reqRole, $dept, &$addOption) {
+                                                        // Only include HOD if not admin/administration and requester is not HOD
+                                                        if (in_array($dept, ['admin','administration'], true)) return;
+                                                        if ($reqRole === 3) return; // requester is HOD already
+                                                        $st = $pdo->prepare("SELECT user_id, fullname FROM users WHERE role_id = 3 AND department = ?");
+                                                        $st->execute([(string)$requester['department']]);
+                                                        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) {
+                                                            $addOption($u['user_id'], $u['fullname'], 'HOD');
+                                                        }
+                                                    };
+
+                                                    // Switch by requester role
+                                                    switch ($reqRole) {
+                                                        case 3: // HOD requester
+                                                            // HRM, IA, Finance
+                                                            foreach ($loadByRole(2) as $u) { $addOption($u['user_id'], $u['fullname'], 'HRM'); }
+                                                            foreach ($loadByRole(6) as $u) { $addOption($u['user_id'], $u['fullname'], 'Internal Auditor'); }
+                                                            foreach ($loadByRole(5) as $u) { $addOption($u['user_id'], $u['fullname'], 'Finance'); }
+                                                            break;
+                                                        case 6: // Internal Auditor requester
+                                                            foreach ($loadByRole(2) as $u) { $addOption($u['user_id'], $u['fullname'], 'HRM'); }
+                                                            foreach ($loadByRole(5) as $u) { $addOption($u['user_id'], $u['fullname'], 'Finance'); }
+                                                            break;
+                                                        case 2: // HRM requester
+                                                            foreach ($loadByRole(6) as $u) { $addOption($u['user_id'], $u['fullname'], 'Internal Auditor'); }
+                                                            foreach ($loadByRole(5) as $u) { $addOption($u['user_id'], $u['fullname'], 'Finance'); }
+                                                            break;
+                                                        case 5: // Finance Manager requester
+                                                            foreach ($loadByRole(2) as $u) { $addOption($u['user_id'], $u['fullname'], 'HRM'); }
+                                                            foreach ($loadByRole(6) as $u) { $addOption($u['user_id'], $u['fullname'], 'Internal Auditor'); }
+                                                            break;
+                                                        default: // General employee or other
+                                                            // their HOD (if applicable), HRM, IA, Finance
+                                                            $includeHOD();
+                                                            foreach ($loadByRole(2) as $u) { $addOption($u['user_id'], $u['fullname'], 'HRM'); }
+                                                            foreach ($loadByRole(6) as $u) { $addOption($u['user_id'], $u['fullname'], 'Internal Auditor'); }
+                                                            foreach ($loadByRole(5) as $u) { $addOption($u['user_id'], $u['fullname'], 'Finance'); }
+                                                            break;
                                                     }
                                                 }
                                                 ?>
