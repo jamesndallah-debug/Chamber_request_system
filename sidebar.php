@@ -53,3 +53,93 @@ $isActive = function($actions) use ($current_action) {
         </a>
     </nav>
 </aside>
+<!-- Inactivity Warning Modal -->
+<div id="idleModal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+  <div class="bg-white rounded-lg shadow-xl max-w-md w-11/12 p-6">
+    <h3 class="text-lg font-bold mb-2 text-gray-900">Session about to expire</h3>
+    <p class="text-sm text-gray-700 mb-4">You've been inactive for a while. You will be logged out automatically in <span id="idleCountdown" class="font-semibold">3:00</span> unless you choose to stay signed in.</p>
+    <div class="flex items-center justify-end gap-3">
+      <button id="idleLogoutBtn" class="px-4 py-2 rounded bg-red-600 text-white font-semibold">Log out</button>
+      <button id="idleStayBtn" class="px-4 py-2 rounded bg-blue-600 text-white font-semibold">Stay signed in</button>
+    </div>
+  </div>
+  <style>
+    .modal.hidden{ display:none; }
+    .modal{ display:flex; }
+  </style>
+</div>
+
+<script>
+(function(){
+  // Only run if user is logged in (sidebar is present in authenticated views)
+  var lastActivity = Date.now();
+  var warnAfterMs = 17 * 60 * 1000; // 17 minutes
+  var logoutAfterMs = 20 * 60 * 1000; // 20 minutes
+  var warningShown = false;
+  var countdownTimer = null;
+  var interval = null;
+
+  function activity(){
+    lastActivity = Date.now();
+    if (warningShown) { hideWarning(); }
+  }
+
+  ['click','mousemove','keydown','scroll','touchstart'].forEach(function(evt){
+    window.addEventListener(evt, activity, { passive: true });
+  });
+
+  function showWarning(){
+    var modal = document.getElementById('idleModal');
+    if (!modal) return;
+    warningShown = true;
+    modal.classList.remove('hidden');
+    startCountdown(180); // 3 minutes
+  }
+  function hideWarning(){
+    var modal = document.getElementById('idleModal');
+    if (!modal) return;
+    warningShown = false;
+    modal.classList.add('hidden');
+    if (countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; }
+  }
+  function formatMMSS(sec){ var m = Math.floor(sec/60), s = sec%60; return m+':' + (s<10?'0'+s:s); }
+  function startCountdown(seconds){
+    var span = document.getElementById('idleCountdown');
+    var remain = seconds;
+    if (span) span.textContent = formatMMSS(remain);
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(function(){
+      remain--;
+      if (span) span.textContent = formatMMSS(Math.max(0, remain));
+      if (remain <= 0){
+        clearInterval(countdownTimer); countdownTimer = null;
+        window.location.href = 'index.php?action=logout';
+      }
+    }, 1000);
+  }
+
+  // Buttons
+  var stayBtn = document.getElementById('idleStayBtn');
+  var logoutBtn = document.getElementById('idleLogoutBtn');
+  if (stayBtn){
+    stayBtn.addEventListener('click', function(){
+      // Foreground ping to refresh LAST_ACTIVITY on server
+      fetch('index.php?action=counts', { cache:'no-store' })
+        .then(function(){ activity(); })
+        .catch(function(){ activity(); });
+      hideWarning();
+    });
+  }
+  if (logoutBtn){
+    logoutBtn.addEventListener('click', function(){ window.location.href = 'index.php?action=logout'; });
+  }
+
+  // Monitor inactivity periodically
+  function tick(){
+    var idleMs = Date.now() - lastActivity;
+    if (!warningShown && idleMs >= warnAfterMs){ showWarning(); }
+    if (idleMs >= logoutAfterMs){ window.location.href = 'index.php?action=logout'; }
+  }
+  interval = setInterval(tick, 15000); // check every 15s
+})();
+</script>

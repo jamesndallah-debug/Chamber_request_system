@@ -63,7 +63,30 @@ function handle_exception($e) {
 
 set_exception_handler('handle_exception');
 
-// Start the session
+// Start the session with inactivity timeout (20 minutes)
+// Set session lifetime before starting the session
+@ini_set('session.gc_maxlifetime', 1200); // 20 minutes
+@ini_set('session.cookie_lifetime', 0);   // until browser closes
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Enforce inactivity timeout server-side
+try {
+    $now = time();
+    $timeout = 1200; // 20 minutes in seconds
+    $isBackground = (isset($_SERVER['HTTP_X_BACKGROUND']) && $_SERVER['HTTP_X_BACKGROUND'] === '1')
+        || (isset($_GET['background']) && $_GET['background'] === '1');
+    if (!empty($_SESSION['LAST_ACTIVITY']) && ($now - (int)$_SESSION['LAST_ACTIVITY']) > $timeout) {
+        // Too long since last activity: destroy session and force login
+        session_unset();
+        session_destroy();
+        header('Location: index.php?action=login&timeout=1');
+        exit;
+    }
+    // Only update LAST_ACTIVITY for non-background (user-driven) requests
+    if (!$isBackground) {
+        $_SESSION['LAST_ACTIVITY'] = $now;
+    }
+} catch (Throwable $e) { /* ignore */ }
