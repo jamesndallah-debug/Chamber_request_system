@@ -280,6 +280,52 @@ switch ($action) {
         echo json_encode(['unread' => 0, 'notifications' => []]);
         exit;
 
+    case 'counts':
+        // Live counts endpoint for dashboard cards
+        if (!$user) {
+            header('Content-Type: application/json');
+            echo json_encode(['total' => 0, 'pending' => 0, 'approved' => 0, 'rejected' => 0]);
+            exit;
+        }
+        header('Content-Type: application/json');
+        try {
+            $roleId = (int)$user['role_id'];
+            if ($roleId === 7) {
+                // Admin: global counts by final status_id
+                $total = (int)$pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn();
+                $pending = (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE status_id = 1")->fetchColumn();
+                $approved = (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE status_id = 2")->fetchColumn();
+                $rejected = (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE status_id = 3")->fetchColumn();
+                echo json_encode(['total' => $total, 'pending' => $pending, 'approved' => $approved, 'rejected' => $rejected]);
+                exit;
+            }
+
+            // Other roles: compute from their visible queue
+            $list = $requestModel->get_requests_for_role($roleId, $user);
+            $pending = 0; $approved = 0; $rejected = 0;
+            foreach ($list as $r) {
+                $statusValue = $r['status_name'] ?? '';
+                if (isset($r['hod_status']) || isset($r['hrm_status']) || isset($r['auditor_status']) || isset($r['finance_status']) || isset($r['ed_status'])) {
+                    switch ($roleId) {
+                        case 3: $statusValue = $r['hod_status'] ?? $statusValue; break;
+                        case 2: $statusValue = $r['hrm_status'] ?? $statusValue; break;
+                        case 6: $statusValue = $r['auditor_status'] ?? $statusValue; break;
+                        case 5: $statusValue = $r['finance_status'] ?? $statusValue; break;
+                        case 4: $statusValue = $r['ed_status'] ?? $statusValue; break;
+                    }
+                }
+                $sv = strtolower((string)$statusValue);
+                if ($sv === 'approved') $approved++;
+                else if ($sv === 'rejected') $rejected++;
+                else $pending++;
+            }
+            echo json_encode(['total' => count($list), 'pending' => $pending, 'approved' => $approved, 'rejected' => $rejected]);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(['total' => 0, 'pending' => 0, 'approved' => 0, 'rejected' => 0]);
+            exit;
+        }
+
     case 'employee_dashboard':
     case 'hod_dashboard':
     case 'hrm_dashboard':

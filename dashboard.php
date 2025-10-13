@@ -49,27 +49,48 @@ try {
 $role_name = $userModel->get_role_name($user['role_id']);
 $dashboard_title = ucfirst($role_name) . ' Dashboard';
 // Compute summary counts for cards
-$total_requests = count($requests);
-$count_pending = 0;
-$count_approved = 0;
-$count_rejected = 0;
-foreach ($requests as $r) {
-    $statusValue = $r['status_name'] ?? '';
-    if (isset($r['hod_status']) || isset($r['hrm_status']) || isset($r['auditor_status']) || isset($r['finance_status']) || isset($r['ed_status'])) {
-        switch ($user['role_id']) {
-            case 3: $statusValue = $r['hod_status'] ?? $statusValue; break;
-            case 2: $statusValue = $r['hrm_status'] ?? $statusValue; break;
-            case 6: $statusValue = $r['auditor_status'] ?? $statusValue; break;
-            case 5: $statusValue = $r['finance_status'] ?? $statusValue; break;
-            case 4: $statusValue = $r['ed_status'] ?? $statusValue; break;
+if ((int)$user['role_id'] === 7) {
+    // Admin: use live COUNT(*) queries for real-time accuracy
+    try {
+        $total_requests = (int)$pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn();
+        $count_pending   = (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE status_id = 1")->fetchColumn();
+        $count_approved  = (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE status_id = 2")->fetchColumn();
+        $count_rejected  = (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE status_id = 3")->fetchColumn();
+    } catch (Throwable $e) {
+        // Fallback to in-memory if DB count fails
+        $total_requests = count($requests);
+        $count_pending = 0; $count_approved = 0; $count_rejected = 0;
+        foreach ($requests as $r) {
+            $sv = strtolower((string)($r['status_name'] ?? ''));
+            if ($sv === 'approved') $count_approved++;
+            else if ($sv === 'rejected') $count_rejected++;
+            else $count_pending++;
         }
     }
-    $sv = strtolower((string)$statusValue);
-    if ($sv === 'approved') $count_approved++;
-    else if ($sv === 'rejected') $count_rejected++;
-    else $count_pending++;
+} else {
+    // Other roles: derive counts from visible list adjusted to their stage
+    $total_requests = count($requests);
+    $count_pending = 0;
+    $count_approved = 0;
+    $count_rejected = 0;
+    foreach ($requests as $r) {
+        $statusValue = $r['status_name'] ?? '';
+        if (isset($r['hod_status']) || isset($r['hrm_status']) || isset($r['auditor_status']) || isset($r['finance_status']) || isset($r['ed_status'])) {
+            switch ($user['role_id']) {
+                case 3: $statusValue = $r['hod_status'] ?? $statusValue; break;
+                case 2: $statusValue = $r['hrm_status'] ?? $statusValue; break;
+                case 6: $statusValue = $r['auditor_status'] ?? $statusValue; break;
+                case 5: $statusValue = $r['finance_status'] ?? $statusValue; break;
+                case 4: $statusValue = $r['ed_status'] ?? $statusValue; break;
+            }
+        }
+        $sv = strtolower((string)$statusValue);
+        if ($sv === 'approved') $count_approved++;
+        else if ($sv === 'rejected') $count_rejected++;
+        else $count_pending++;
+    }
 }
-$pct_div = max(1, $total_requests);
+$pct_div = max(1, (int)$total_requests);
 $pending_pct = (int)round(($count_pending / $pct_div) * 100);
 $approved_pct = (int)round(($count_approved / $pct_div) * 100);
 $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
@@ -281,21 +302,21 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 reveal">
                     <div class="card-stat p-4 rounded-lg" style="transition-delay:.05s">
                         <div class="text-sm text-blue-200">⏳ Pending</div>
-                        <div class="text-3xl font-extrabold text-yellow-400 drop-shadow"><?= $count_pending ?></div>
-                        <div class="mt-2 meter"><div class="meter-bar" style="--pct: <?= $pending_pct ?>%; position:relative;"></div><div class="meter-shimmer"></div></div>
-                        <div class="mt-1 text-xs text-slate-300"><?= $pending_pct ?>%</div>
+                        <div id="pendingCount" class="text-3xl font-extrabold text-yellow-400 drop-shadow"><?= $count_pending ?></div>
+                        <div class="mt-2 meter"><div id="pendingBar" class="meter-bar" style="--pct: <?= $pending_pct ?>%; position:relative;"></div><div class="meter-shimmer"></div></div>
+                        <div class="mt-1 text-xs text-slate-300"><span id="pendingPct"><?= $pending_pct ?></span>%</div>
                     </div>
                     <div class="card-stat p-4 rounded-lg" style="transition-delay:.15s">
                         <div class="text-sm text-green-200">✅ Approved</div>
-                        <div class="text-3xl font-extrabold text-green-400 drop-shadow"><?= $count_approved ?></div>
-                        <div class="mt-2 meter"><div class="meter-bar green" style="--pct: <?= $approved_pct ?>%; position:relative;"></div><div class="meter-shimmer"></div></div>
-                        <div class="mt-1 text-xs text-slate-300"><?= $approved_pct ?>%</div>
+                        <div id="approvedCount" class="text-3xl font-extrabold text-green-400 drop-shadow"><?= $count_approved ?></div>
+                        <div class="mt-2 meter"><div id="approvedBar" class="meter-bar green" style="--pct: <?= $approved_pct ?>%; position:relative;"></div><div class="meter-shimmer"></div></div>
+                        <div class="mt-1 text-xs text-slate-300"><span id="approvedPct"><?= $approved_pct ?></span>%</div>
                     </div>
                     <div class="card-stat p-4 rounded-lg" style="transition-delay:.25s">
                         <div class="text-sm text-red-200">❌ Rejected</div>
-                        <div class="text-3xl font-extrabold text-red-400 drop-shadow"><?= $count_rejected ?></div>
-                        <div class="mt-2 meter"><div class="meter-bar red" style="--pct: <?= $rejected_pct ?>%; position:relative;"></div><div class="meter-shimmer"></div></div>
-                        <div class="mt-1 text-xs text-slate-300"><?= $rejected_pct ?>%</div>
+                        <div id="rejectedCount" class="text-3xl font-extrabold text-red-400 drop-shadow"><?= $count_rejected ?></div>
+                        <div class="mt-2 meter"><div id="rejectedBar" class="meter-bar red" style="--pct: <?= $rejected_pct ?>%; position:relative;"></div><div class="meter-shimmer"></div></div>
+                        <div class="mt-1 text-xs text-slate-300"><span id="rejectedPct"><?= $rejected_pct ?></span>%</div>
                     </div>
                 </div>
                 <div class="divider mb-4"></div>
@@ -542,6 +563,48 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
     </div>
 </body>
 </html>
+<script>
+// Live counts updater
+(function(){
+  const els = {
+    pendingCount: document.getElementById('pendingCount'),
+    approvedCount: document.getElementById('approvedCount'),
+    rejectedCount: document.getElementById('rejectedCount'),
+    pendingPct: document.getElementById('pendingPct'),
+    approvedPct: document.getElementById('approvedPct'),
+    rejectedPct: document.getElementById('rejectedPct'),
+    pendingBar: document.getElementById('pendingBar'),
+    approvedBar: document.getElementById('approvedBar'),
+    rejectedBar: document.getElementById('rejectedBar'),
+  };
+  async function refreshCounts(){
+    try {
+      const res = await fetch('index.php?action=counts', { headers: { 'Cache-Control':'no-cache' }});
+      const data = await res.json();
+      const total = Math.max(1, parseInt(data.total||0,10));
+      const pending = parseInt(data.pending||0,10);
+      const approved = parseInt(data.approved||0,10);
+      const rejected = parseInt(data.rejected||0,10);
+      const pp = Math.round((pending/total)*100);
+      const ap = Math.round((approved/total)*100);
+      const rp = Math.round((rejected/total)*100);
+      if (els.pendingCount) els.pendingCount.textContent = pending;
+      if (els.approvedCount) els.approvedCount.textContent = approved;
+      if (els.rejectedCount) els.rejectedCount.textContent = rejected;
+      if (els.pendingPct) els.pendingPct.textContent = pp;
+      if (els.approvedPct) els.approvedPct.textContent = ap;
+      if (els.rejectedPct) els.rejectedPct.textContent = rp;
+      if (els.pendingBar) els.pendingBar.style.setProperty('--pct', pp+'%');
+      if (els.approvedBar) els.approvedBar.style.setProperty('--pct', ap+'%');
+      if (els.rejectedBar) els.rejectedBar.style.setProperty('--pct', rp+'%');
+    } catch (e) {
+      // ignore network errors
+    }
+  }
+  refreshCounts();
+  setInterval(refreshCounts, 20000);
+})();
+</script>
 <script>
 // Avatar crop modal
 (function(){
