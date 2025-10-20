@@ -64,8 +64,8 @@ $isActive = function($actions) use ($current_action) {
     </div>
   </div>
   <style>
-    .modal.hidden{ display:none; }
-    .modal{ display:flex; }
+    #idleModal.hidden{ display:none; }
+    #idleModal{ display:flex; }
   </style>
 </div>
 
