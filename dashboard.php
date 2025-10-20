@@ -140,7 +140,7 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
         @keyframes fill { from { width:0 } to { width: var(--pct, 0%); } }
         @keyframes marquee { 0% { transform: translateX(100%);} 100% { transform: translateX(-100%);} }
         .marquee { white-space: nowrap; overflow: hidden; }
-        .marquee > span { display:inline-block; padding-left:100%; animation: marquee 30s linear infinite; }
+        .marquee > span { display:inline-block; padding-left:100%; animation: marquee 45s linear infinite; }
         /* Modal for avatar crop */
         .modal { position: fixed; inset: 0; background: rgba(3,6,20,.65); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:60; }
         .modal.show { display:flex; }
