@@ -299,7 +299,12 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                 </div>
                 <?php endif; ?>
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 reveal">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 reveal">
+                    <div class="card-stat p-4 rounded-lg" style="transition-delay:0s">
+                        <div class="text-sm text-slate-200">📊 Total</div>
+                        <div id="totalCount" class="text-3xl font-extrabold text-blue-400 drop-shadow"><?= (int)$total_requests ?></div>
+                        <div class="mt-2 text-xs text-slate-300">All requests visible to you</div>
+                    </div>
                     <div class="card-stat p-4 rounded-lg" style="transition-delay:.05s">
                         <div class="text-sm text-blue-200">⏳ Pending</div>
                         <div id="pendingCount" class="text-3xl font-extrabold text-yellow-400 drop-shadow"><?= $count_pending ?></div>
@@ -566,7 +571,9 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
 <script>
 // Live counts updater
 (function(){
+  let countsScope = 'queue'; // 'queue' | 'my'
   const els = {
+    totalCount: document.getElementById('totalCount'),
     pendingCount: document.getElementById('pendingCount'),
     approvedCount: document.getElementById('approvedCount'),
     rejectedCount: document.getElementById('rejectedCount'),
@@ -579,7 +586,8 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
   };
   async function refreshCounts(){
     try {
-      const res = await fetch('index.php?action=counts', { headers: { 'Cache-Control':'no-cache' }});
+      const url = countsScope === 'my' ? 'index.php?action=counts&scope=my' : 'index.php?action=counts';
+      const res = await fetch(url, { headers: { 'Cache-Control':'no-cache' }});
       const data = await res.json();
       const total = Math.max(1, parseInt(data.total||0,10));
       const pending = parseInt(data.pending||0,10);
@@ -588,6 +596,7 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
       const pp = Math.round((pending/total)*100);
       const ap = Math.round((approved/total)*100);
       const rp = Math.round((rejected/total)*100);
+      if (els.totalCount) els.totalCount.textContent = (data.total||0);
       if (els.pendingCount) els.pendingCount.textContent = pending;
       if (els.approvedCount) els.approvedCount.textContent = approved;
       if (els.rejectedCount) els.rejectedCount.textContent = rejected;
@@ -603,6 +612,11 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
   }
   refreshCounts();
   setInterval(refreshCounts, 20000);
+  // Expose setter for tab switcher
+  window.setCountsScope = function(scope){
+    countsScope = (scope === 'my') ? 'my' : 'queue';
+    refreshCounts();
+  };
 })();
 </script>
 <script>
@@ -726,6 +740,7 @@ function showTab(tabName) {
         if (myRequestsContent) {
             myRequestsContent.style.display = 'none';
         }
+        if (window.setCountsScope) window.setCountsScope('queue');
     } else if (tabName === 'myRequests') {
         // Show my requests tab
         if (myRequestsTab) {
@@ -739,6 +754,7 @@ function showTab(tabName) {
             myRequestsContent.style.display = 'block';
         }
         requestsContent.style.display = 'none';
+        if (window.setCountsScope) window.setCountsScope('my');
     }
 }
 
@@ -815,6 +831,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+<?php if (!empty($force_my_requests_tab)): ?>
+<script>
+// Force My Requests as default tab when hinted by server
+document.addEventListener('DOMContentLoaded', function(){
+    if (typeof showTab === 'function') {
+        showTab('myRequests');
+    }
+    if (window.setCountsScope) window.setCountsScope('my');
+});
+</script>
+<?php endif; ?>
 // Server-triggered confetti (after ED approval)
 (function(){
     <?php if (!empty($_SESSION['confetti']) && $_SESSION['confetti'] === 'ed_approved') { unset($_SESSION['confetti']); ?>

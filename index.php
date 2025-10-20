@@ -290,6 +290,22 @@ switch ($action) {
         header('Content-Type: application/json');
         try {
             $roleId = (int)$user['role_id'];
+            $scope = isset($_GET['scope']) ? strtolower((string)$_GET['scope']) : '';
+
+            if ($scope === 'my') {
+                // Counts for current user's own requests (overall status)
+                $my = $requestModel->get_my_requests((int)$user['user_id']);
+                $pending = 0; $approved = 0; $rejected = 0;
+                foreach ($my as $r) {
+                    $sv = strtolower((string)($r['status_name'] ?? ''));
+                    if ($sv === 'approved') $approved++;
+                    else if ($sv === 'rejected') $rejected++;
+                    else $pending++;
+                }
+                echo json_encode(['total' => count($my), 'pending' => $pending, 'approved' => $approved, 'rejected' => $rejected]);
+                exit;
+            }
+
             if ($roleId === 7) {
                 // Admin: global counts by final status_id
                 $total = (int)$pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn();
