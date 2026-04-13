@@ -57,6 +57,15 @@ try {
     }
 } catch (Throwable $e) { /* ignore */ }
 
+// Ensure users.directorate column exists (used by directorate management + register flow)
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'directorate'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        // Directorate name is stored as a string (maps to directorates.name)
+        $pdo->exec("ALTER TABLE users ADD COLUMN directorate VARCHAR(100) NULL AFTER department");
+    }
+} catch (Throwable $e) { /* ignore */ }
+
 // Ensure requests.details_json column exists to store dynamic form data
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM requests LIKE 'details_json'");
@@ -118,6 +127,46 @@ function set_last_login(PDO $pdo, int $user_id): void {
     }
 }
 
+function get_pending_stage(array $request): string {
+    $type = (string)($request['request_type'] ?? '');
+    $hod = (string)($request['hod_status'] ?? 'pending');
+    $hrm = (string)($request['hrm_status'] ?? 'pending');
+    $aud = (string)($request['auditor_status'] ?? 'pending');
+    $fin = (string)($request['finance_status'] ?? 'pending');
+    $ed  = (string)($request['ed_status'] ?? 'pending');
+    if (strtolower((string)($request['status_name'] ?? 'pending')) === 'rejected') return '';
+    if (strtolower($ed) === 'approved') return '';
+    if ($type === 'TNCC retirement request') {
+        if ($fin === 'pending') return 'Finance';
+        if ($fin === 'approved' && $ed === 'pending') return 'CEO';
+        return '';
+    }
+    $dept = strtolower(preg_replace('/[^a-z]/i', '', (string)($request['department'] ?? '')));
+    $isHrDept = is_department($dept, 'hr');
+    $isAdminDept = in_array($dept, ['admin','administration'], true);
+    $iaAliases = ['internalauditor','audit','internalaudit'];
+    if ($isHrDept || $isAdminDept) {
+        if ($hrm === 'pending') return 'HRM';
+        if ($hrm === 'approved' && $aud === 'pending') return 'Audit';
+        if ($aud === 'approved' && $fin === 'pending') return 'Finance';
+        if ($fin === 'approved' && $ed === 'pending') return 'CEO';
+        return '';
+    }
+    if (in_array($dept, $iaAliases, true)) {
+        if ($aud === 'pending') return 'Audit';
+        if ($aud === 'approved' && $hrm === 'pending') return 'HRM';
+        if ($hrm === 'approved' && $fin === 'pending') return 'Finance';
+        if ($fin === 'approved' && $ed === 'pending') return 'CEO';
+        return '';
+    }
+    if ($hod === 'pending') return 'HOD';
+    if ($hod === 'approved' && $hrm === 'pending') return 'HRM';
+    if ($hrm === 'approved' && $aud === 'pending') return 'Audit';
+    if ($aud === 'approved' && $fin === 'pending') return 'Finance';
+    if ($fin === 'approved' && $ed === 'pending') return 'CEO';
+    return '';
+}
+
 // Ensure users.profile_image column exists for avatars
 try {
     $colCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'profile_image'");
@@ -142,6 +191,21 @@ try {
         PRIMARY KEY (role_id),
         UNIQUE KEY role_name (role_name)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Add activation / timestamps columns if missing
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM roles LIKE 'is_active'");
+        if ($colCheck && $colCheck->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE roles ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER role_name");
+        }
+    } catch (Throwable $e) { /* ignore */ }
+
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM roles LIKE 'updated_at'");
+        if ($colCheck && $colCheck->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE roles ADD COLUMN updated_at TIMESTAMP NULL AFTER role_name");
+        }
+    } catch (Throwable $e) { /* ignore */ }
     
     // Insert default roles if they don't exist
     $roleCheck = $pdo->query("SELECT COUNT(*) FROM roles");
@@ -150,13 +214,31 @@ try {
             (1, 'Employee'),
             (2, 'HRM'),
             (3, 'HOD'),
-            (4, 'ED'),
+            (4, 'CEO'),
             (5, 'Finance Manager'),
             (6, 'Internal Auditor'),
             (7, 'Admin')");
     }
     // Ensure Finance role label is consistent if roles were seeded before
     $pdo->exec("UPDATE roles SET role_name='Finance Manager' WHERE role_id=5 AND role_name <> 'Finance Manager'");
+
+    // Make sure existing rows have valid defaults for new columns
+    try {
+        $pdo->exec("UPDATE roles SET is_active = 1 WHERE is_active IS NULL");
+    } catch (Throwable $e) { /* ignore */ }
+} catch (Throwable $e) { /* ignore */ }
+
+// Ensure directorates table exists
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS directorates (
+        id INT NOT NULL AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uniq_directorate_name (name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 } catch (Throwable $e) { /* ignore */ }
 
 // Ensure request_statuses table exists
@@ -237,11 +319,23 @@ try {
         title VARCHAR(150) NOT NULL,
         message TEXT NOT NULL,
         request_id INT DEFAULT NULL,
+        voucher_id INT DEFAULT NULL,
         is_read TINYINT(1) NOT NULL DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        KEY user_id (user_id)
+        KEY user_id (user_id),
+        KEY request_id (request_id),
+        KEY voucher_id (voucher_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch (Throwable $e) { /* ignore */ }
+
+// Ensure notifications.voucher_id column exists (older installations)
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM notifications LIKE 'voucher_id'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE notifications ADD COLUMN voucher_id INT DEFAULT NULL AFTER request_id");
+        $pdo->exec("CREATE INDEX voucher_id ON notifications (voucher_id)");
+    }
 } catch (Throwable $e) { /* ignore */ }
 
 // Ensure password_resets table exists for forgot/reset password flow
@@ -267,6 +361,42 @@ function current_user() {
 // Escapes output for HTML to prevent XSS.
 function e($string) {
     return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+}
+
+// --- CSRF protection helpers ---
+function csrf_token(): string {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        // Session should already be active via config.php, but guard anyway
+        @session_start();
+    }
+    if (empty($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token']) || strlen($_SESSION['csrf_token']) < 32) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return (string)$_SESSION['csrf_token'];
+}
+
+function csrf_field(): string {
+    return '<input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">';
+}
+
+function csrf_verify(?string $token): bool {
+    $sess = $_SESSION['csrf_token'] ?? '';
+    if (!is_string($sess) || $sess === '' || !is_string($token) || $token === '') {
+        return false;
+    }
+    return hash_equals($sess, $token);
+}
+
+function require_csrf_post(): void {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        return;
+    }
+    $token = $_POST['csrf_token'] ?? '';
+    if (!csrf_verify(is_string($token) ? $token : '')) {
+        http_response_code(400);
+        echo 'Invalid CSRF token.';
+        exit;
+    }
 }
 
 // Simple email validation
@@ -463,7 +593,7 @@ function can_approve($user_role_id, $request) {
     $fin = strtolower((string)($request['finance_status'] ?? ''));
     $ed  = strtolower((string)($request['ed_status'] ?? ''));
 
-    // Special routing: Salary advance => HRM -> Finance -> ED only
+    // Special routing: Salary advance => HRM -> Finance -> CEO only
     if ($type === 'Salary advance') {
         switch ((int)$user_role_id) {
             case 3: // HOD never involved
@@ -473,19 +603,19 @@ function can_approve($user_role_id, $request) {
                 return $hrm === 'pending';
             case 5: // Finance after HRM
                 return $fin === 'pending' && $hrm === 'approved';
-            case 4: // ED after Finance
+            case 4: // CEO after Finance
                 return $ed === 'pending' && $fin === 'approved';
             default:
                 return false;
         }
     }
 
-    // Special routing: TCCIA retirement request => Finance -> ED only
-    if ($type === 'TCCIA retirement request') {
+    // Special routing: Retirement (formerly TNCC retirement request) => Finance -> CEO only
+    if ($type === 'Retirement' || $type === 'TNCC retirement request') {
         switch ((int)$user_role_id) {
             case 5: // Finance first
                 return $fin === 'pending';
-            case 4: // ED after Finance
+            case 4: // CEO after Finance
                 return $ed === 'pending' && $fin === 'approved';
             default:
                 return false;
@@ -493,8 +623,9 @@ function can_approve($user_role_id, $request) {
     }
 
     // Department-aware routing for Employee requests
-    // HR & Administration departments: HRM -> Internal Auditor -> Finance -> ED (skip HOD)
-    // Internal Auditor department: Auditor -> HRM -> Finance -> ED (skip HOD)
+    // HR & Administration departments: HRM -> Internal Auditor -> Finance -> CEO (skip HOD)
+    // Internal Auditor department: Auditor -> HRM -> Finance -> CEO (skip HOD)
+    // IT & Data department: HOD -> HRM -> Internal Auditor -> Finance -> CEO
     try {
         $applicantUserId = (int)($request['user_id'] ?? 0);
         if ($applicantUserId > 0) {
@@ -516,14 +647,14 @@ function can_approve($user_role_id, $request) {
                             return $aud === 'pending' && $hrm === 'approved';
                         case 5: // Finance after IA
                             return $fin === 'pending' && $aud === 'approved';
-                        case 4: // ED after Finance
+                        case 4: // CEO after Finance
                             return $ed === 'pending' && $fin === 'approved';
                         default:
                             return false; // HOD and others not in this route
                     }
                 }
 
-                // Internal Auditor department employees: Auditor -> HRM -> Finance -> ED
+                // Internal Auditor department employees: Auditor -> HRM -> Finance -> CEO
                 $iaAliases = ['internalauditor','audit','internalaudit'];
                 if (in_array($normDept, $iaAliases, true)) {
                     switch ((int)$user_role_id) {
@@ -533,7 +664,26 @@ function can_approve($user_role_id, $request) {
                             return $hrm === 'pending' && $aud === 'approved';
                         case 5: // Finance after HRM
                             return $fin === 'pending' && $hrm === 'approved';
-                        case 4: // ED after Finance
+                        case 4: // CEO after Finance
+                            return $ed === 'pending' && $fin === 'approved';
+                        default:
+                            return false;
+                    }
+                }
+
+                // IT & Data department employees: HOD -> HRM -> Internal Auditor -> Finance -> CEO
+                $itAliases = ['it','data','itdata','informationtechnology','technology'];
+                if (in_array($normDept, $itAliases, true)) {
+                    switch ((int)$user_role_id) {
+                        case 3: // HOD first
+                            return $hod === 'pending';
+                        case 2: // HRM after HOD
+                            return $hrm === 'pending' && $hod === 'approved';
+                        case 6: // Internal Auditor after HRM
+                            return $aud === 'pending' && $hrm === 'approved';
+                        case 5: // Finance after IA
+                            return $fin === 'pending' && $aud === 'approved';
+                        case 4: // CEO after Finance
                             return $ed === 'pending' && $fin === 'approved';
                         default:
                             return false;
@@ -543,7 +693,7 @@ function can_approve($user_role_id, $request) {
         }
     } catch (Throwable $e) { /* ignore and fall back to default */ }
 
-    // Default workflow: HOD -> HRM -> Internal Auditor -> Finance -> ED
+    // Default workflow: HOD -> HRM -> Internal Auditor -> Finance -> CEO
     switch ((int)$user_role_id) {
         case 3: // HOD
             return $hod === 'pending';

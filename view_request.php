@@ -46,13 +46,14 @@ try {
 
 // Handle message deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_msg']) && isset($user)) {
+    require_csrf_post();
     $message_id = (int)$_POST['message_id'];
     // Only allow users to delete their own messages or admins to delete any message
     $stmt = $pdo->prepare("SELECT sender_user_id FROM request_messages WHERE id = ? AND request_id = ?");
     $stmt->execute([$message_id, $request['request_id']]);
     $message = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if ($message && ($message['sender_user_id'] == $user['user_id'] || (int)$user['role_id'] === 1)) {
+    if ($message && ($message['sender_user_id'] == $user['user_id'] || (int)$user['role_id'] === 7)) {
         $stmt = $pdo->prepare("DELETE FROM request_messages WHERE id = ?");
         $stmt->execute([$message_id]);
     }
@@ -63,11 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_msg']) && isse
 
 // Process message submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_msg']) && isset($user)) {
+    require_csrf_post();
     $content = trim($_POST['content'] ?? '');
     $to = !empty($_POST['recipient_user_id']) ? (int)$_POST['recipient_user_id'] : null;
 
     // Routing rules:
-    // - ED (role_id=4) may target a specific user via select (keep provided $to, or null for public)
+    // - CEO (role_id=4) may target a specific user via select (keep provided $to, or null for public)
     // - Non-ED messages are always private to ED (auto-route to ED)
     if ((int)$user['role_id'] !== 4) {
         try {
@@ -137,16 +139,15 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <style>
         body{font-family:'Inter',sans-serif}
         @media print { .no-print { display: none !important; } }
-        .orb-bg { position:absolute; inset:-40px; filter:blur(70px); opacity:.35; pointer-events:none; }
-        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#0b5ed710; border:1px solid #0b5ed733; color:#0b5ed7; font-weight:600; }
-        .btn-gradient { background:linear-gradient(90deg,#0b5ed7,#d4af37); color:#fff; }
-        .btn-gradient:hover { filter:brightness(1.05); }
+        /* Removed orb-bg */
+        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#0b5ed710; border:1px solid #0b5ed733; color:#0b5ed7; }
+        /* Removed non-standard .btn-gradient styles */
         .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
         .confetti i { position:absolute; width:8px; height:14px; transform: rotate(15deg); opacity:.9; will-change: transform; }
         
         /* Improve dropdown option visibility */
     select option {
-        font-weight: 600;
+        font-weight: normal;
         color: #111827;
         padding: 10px;
         background-color: white;
@@ -185,13 +186,13 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     select:focus option:checked {
         background-color: #0b5ed7 !important;
         color: white !important;
-        font-weight: 600 !important;
+        font-weight: normal !important;
     }
     
     /* Selected recipient indicator */
     .selected-recipient {
         display: inline-block;
-        font-weight: 600;
+        font-weight: normal;
         animation: fadeIn 0.3s ease-in-out;
     }
     
@@ -208,7 +209,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     /* Improve message visibility */
     .message-content {
-        font-weight: 500;
+        font-weight: 400;
         color: #111827;
         line-height: 1.6;
         letter-spacing: 0.01em;
@@ -364,9 +365,11 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php
         $type = (string)($request['request_type'] ?? '');
         $emojiMap = [
+            'Imprest request' => '💰',
             'Impest request' => '💰',
             'Reimbursement request' => '↩️',
-            'TCCIA retirement request' => '📑',
+            'Retirement' => '📑',
+            'TNCC retirement request' => '📑',
             'Salary advance' => '💵',
             'Travel form' => '✈️',
             'Annual leave' => '🏖️',
@@ -379,48 +382,49 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $typeEmoji = $emojiMap[$type] ?? '📝';
     ?>
 </head>
-<body class="bg-gray-900 flex min-h-screen">
-    <div class="bg-orb"></div><!-- Added third orb for better background effect -->
+<body class="bg-gray-50 flex min-h-screen">
+    <!-- <div class="bg-orb"></div>Added third orb for better background effect -->
     <?php include __DIR__ . '/sidebar.php'; ?>
 
     <div class="flex-1 flex flex-col">
-        <header class="bg-slate-800/80 backdrop-blur border-b border-white/10 sticky top-0 z-40 p-5 flex items-center justify-between text-white shadow-lg">
+        <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-5 flex items-center justify-between text-gray-800 shadow-sm">
             <h1 class="text-2xl font-semibold flex items-center gap-3">
                 <span class="flex items-center gap-2">
                     <span class="text-brand-gold">Request #<?= e($request['request_id']) ?></span>
                 </span>
-                <span class="chip bg-white/10 border-white/20"><span class="text-xl"><?= e($typeEmoji) ?></span><span><?= e($type) ?></span></span>
+                <span class="chip bg-gray-100 border-gray-200"><span class="text-xl"><?= e($typeEmoji) ?></span><span><?= e($type) ?></span></span>
             </h1>
             <div class="no-print flex items-center gap-4">
-                <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"><span>←</span> Back to Dashboard</a>
+                <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"><span>←</span> Back to Dashboard</a>
                 <?php $isAdmin = ((int)$user['role_id'] === 7); ?>
                 <?php if ($isAdmin): ?>
                 <form method="POST" action="index.php?action=delete_request" onsubmit="return confirm('Delete this request permanently? This cannot be undone.');">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="id" value="<?= e($request['request_id']) ?>" />
-                    <button type="submit" class="px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all" style="background:linear-gradient(90deg,#ef4444,#b91c1c); color:#fff;">🗑️ Delete</button>
+                    <button type="submit" class="btn btn-danger btn-sm shadow-md hover:shadow-lg transition-all">🗑️ Delete</button>
                 </form>
                 <?php endif; ?>
-                <button onclick="window.print()" class="btn-gradient px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all">🖨️ Print</button>
+                <button onclick="window.print()" class="btn btn-secondary btn-sm shadow-md hover:shadow-lg transition-all">🖨️ Print</button>
             </div>
         </header>
 
-        <main class="flex-1 p-8">
+        <main class="flex-1 p-6">
             <div class="relative">
-                <div aria-hidden="true" class="orb-bg" style="background:radial-gradient(closest-side,#0b5ed7,transparent 70%),radial-gradient(closest-side,#d4af37,transparent 70%) 70% 10%/40% 40% no-repeat,radial-gradient(closest-side,#16a34a,transparent 70%) 30% 90%/35% 35% no-repeat;"></div>
+                <!-- Removed orb-bg container -->
             </div>
-            <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl ring-1 ring-black/5 max-w-5xl mx-auto print-container">
+            <div class="bg-white/80 backdrop-blur p-6 rounded-2xl shadow-xl ring-1 ring-black/5 max-w-4xl mx-auto print-container">
                 <div class="mb-8 border-b border-gray-200 pb-6">
                     <h2 class="text-xl font-bold mb-4 text-gray-800">Request Information</h2>
                     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="bg-gray-50/50 p-4 rounded-lg shadow-sm">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                             <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">Title</div>
                             <div class="font-medium text-gray-900 text-lg"><?= e($request['title']) ?></div>
                         </div>
-                        <div class="bg-gray-50/50 p-4 rounded-lg shadow-sm">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                             <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">Type</div>
                             <div class="font-medium text-gray-900 text-lg"><?= e($request['request_type']) ?></div>
                         </div>
-                        <div class="bg-gray-50/50 p-4 rounded-lg shadow-sm">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                             <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">Status</div>
                             <div class="font-medium text-lg">
                                 <?php 
@@ -433,17 +437,20 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 $statusClass = $statusColors[strtolower($request['status_name'])] ?? 'bg-gray-100 text-gray-800 border border-gray-200';
                                 ?>
                                 <span class="px-3 py-1 rounded-full <?= $statusClass ?> font-semibold text-base"><?= e($request['status_name']) ?></span>
+                                <?php $pending_at = get_pending_stage($request); if (strtolower((string)$request['status_name']) === 'pending' && $pending_at !== ''): ?>
+                                    <div class="mt-1 text-sm text-yellow-700">Pending at <?= e($pending_at) ?></div>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <div class="bg-gray-50/50 p-4 rounded-lg shadow-sm">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                             <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">Employee</div>
                             <div class="font-medium text-gray-900"><?= e($request['fullname']) ?></div>
                         </div>
-                        <div class="bg-gray-50/50 p-4 rounded-lg shadow-sm">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                             <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">Department</div>
                             <div class="font-medium text-gray-900"><?= e($request['department']) ?></div>
                         </div>
-                        <div class="bg-gray-50/50 p-4 rounded-lg shadow-sm">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                             <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">Created</div>
                             <div class="font-medium text-gray-900"><?= date('Y-m-d H:i', strtotime($request['created_at'])) ?></div>
                         </div>
@@ -452,7 +459,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <div class="mb-8">
                     <h2 class="text-xl font-bold mb-4 text-gray-800">Description</h2>
-                    <div class="bg-gray-50/50 p-5 rounded-lg shadow-sm">
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                         <div class="text-gray-800 whitespace-pre-wrap leading-relaxed"><?= e($request['description']) ?></div>
                     </div>
                 </div>
@@ -460,7 +467,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php if (!empty($request['attachment_path'])): ?>
                     <div class="mb-8">
                         <h2 class="text-xl font-bold mb-4 text-gray-800">Attachment</h2>
-                        <div class="bg-gray-50/50 p-5 rounded-lg shadow-sm flex items-center gap-3">
+                        <div class="bg-white p-5 rounded-lg shadow-sm flex items-center gap-3 border border-gray-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                             </svg>
@@ -472,8 +479,9 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php if (can_approve($user['role_id'], $request)): ?>
                     <div class="mb-8 no-print">
                         <h2 class="text-xl font-bold mb-4 text-gray-800">Request Action</h2>
-                        <div class="bg-blue-50/50 p-5 rounded-lg shadow-sm border border-blue-100">
+                        <div class="bg-blue-50 p-5 rounded-lg shadow-sm border border-blue-100">
                             <form method="POST" action="index.php?action=process_request">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="id" value="<?= e($request['request_id']) ?>">
                                 <div class="grid md:grid-cols-3 gap-6">
                                     <div class="md:col-span-2">
@@ -504,7 +512,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php if (!empty($details)): ?>
                     <div class="mb-8">
                         <h2 class="text-xl font-bold mb-4 text-gray-800">Additional Details</h2>
-                        <div class="bg-gray-50/50 p-5 rounded-lg shadow-sm">
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                             <div class="grid md:grid-cols-2 gap-5">
                                 <?php foreach ($details as $k => $v): ?>
                                     <div class="border-b border-gray-100 pb-3">
@@ -525,9 +533,9 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
                         </svg>
                         Messages
-                        <span class="text-sm text-gray-500 font-normal ml-2">(ED may address specific users; others can reply)</span>
+                        <span class="text-sm text-gray-500 font-normal ml-2">(CEO may address specific users; others can reply)</span>
                     </h2>
-                    <div class="bg-gray-50/50 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div class="p-5 border-b border-gray-200 bg-white/50">
                             <div class="max-h-96 overflow-y-auto pr-2 space-y-5" id="messages-container">
                                 <?php if (empty($messages)): ?>
@@ -571,8 +579,9 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                         Public
                                                     </span>
                                                 <?php endif; ?>
-                                                <?php if ($m['sender_user_id'] == $user['user_id'] || (int)$user['role_id'] === 1): ?>
+                                                <?php if ($m['sender_user_id'] == $user['user_id'] || (int)$user['role_id'] === 7): ?>
                                                     <form method="POST" onsubmit="return confirm('Are you sure you want to delete this message?');" class="inline">
+                                                        <?= csrf_field() ?>
                                                         <input type="hidden" name="message_id" value="<?= $m['id'] ?>">
                                                         <button type="submit" name="delete_msg" class="text-red-500 hover:text-red-700 transition-colors delete-btn" title="Delete message">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -601,6 +610,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                         <div class="p-5 bg-white">
                             <form method="POST" class="space-y-4">
+                                <?= csrf_field() ?>
                                 <div>
                                     <label class="block text-base font-semibold text-gray-900 mb-2">Your Message</label>
                                     <div class="relative">
@@ -613,13 +623,13 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <?php if ((int)$user['role_id'] === 4): ?>
+                                    <?php if ((int)$user['role_id'] === 4): // CEO role ?>
                                         <div class="flex-1 send-to-field">
                                             <label class="block text-base font-semibold text-gray-900 mb-2">Send To <span class="text-brand-blue">(Select recipient)</span></label>
                                             <select name="recipient_user_id" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-base font-semibold text-gray-900">
                                                 <option value="" class="font-semibold">Everyone (Public Message)</option>
                                                 <?php 
-                                                // Build allowed recipients for ED per business rules
+                                                // Build allowed recipients for CEO per business rules
                                                 $requester_id = (int)$request['user_id'];
                                                 $rq = $pdo->prepare("SELECT user_id, fullname, role_id, department FROM users WHERE user_id = ?");
                                                 $rq->execute([$requester_id]);

@@ -11,6 +11,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = json_decode(file_get_contents('php://input'), true);
 
+// CSRF check (JSON endpoint)
+$csrf = '';
+if (is_array($input) && isset($input['csrf_token']) && is_string($input['csrf_token'])) {
+    $csrf = $input['csrf_token'];
+} elseif (isset($_SERVER['HTTP_X_CSRF_TOKEN']) && is_string($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+    $csrf = (string)$_SERVER['HTTP_X_CSRF_TOKEN'];
+}
+if (!csrf_verify($csrf)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+    exit;
+}
+
 // Handle demo mode for testing
 if (isset($input['demo']) && $input['demo'] === true) {
     $email = $input['email'] ?? 'demo@chamber.co.tz';
@@ -24,6 +37,14 @@ if (isset($input['demo']) && $input['demo'] === true) {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($user) {
+        // Block deactivated or deleted users
+        if ((isset($user['active']) && (int)$user['active'] === 0) || (!empty($user['deleted_at']))) {
+            echo json_encode(['success' => false, 'message' => 'Your account has been deactivated. Please contact the administrator.']);
+            exit;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_regenerate_id(true);
+        }
         $_SESSION['user'] = $user;
         echo json_encode(['success' => true, 'message' => 'Login successful', 'user_role' => (int)$user['role_id']]);
     } else {
@@ -36,6 +57,9 @@ if (isset($input['demo']) && $input['demo'] === true) {
             $fetch = $pdo->prepare('SELECT * FROM users WHERE user_id = ?');
             $fetch->execute([$newId]);
             $user_data = $fetch->fetch(PDO::FETCH_ASSOC);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                @session_regenerate_id(true);
+            }
             $_SESSION['user'] = $user_data;
             
             echo json_encode(['success' => true, 'message' => 'Account created successfully!', 'user_role' => (int)$user_data['role_id']]);
@@ -90,7 +114,14 @@ try {
             $updateStmt->execute([$google_id, $user['user_id']]);
             $user['google_id'] = $google_id;
         }
-        
+        // Block deactivated or deleted users
+        if ((isset($user['active']) && (int)$user['active'] === 0) || (!empty($user['deleted_at']))) {
+            echo json_encode(['success' => false, 'message' => 'Your account has been deactivated. Please contact the administrator.']);
+            exit;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_regenerate_id(true);
+        }
         // Login existing user
         $_SESSION['user'] = $user;
         
@@ -112,6 +143,9 @@ try {
             $newId = (int)$pdo->lastInsertId();
             $fetch = $pdo->prepare('SELECT * FROM users WHERE user_id = ?');
             $fetch->execute([$newId]);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                @session_regenerate_id(true);
+            }
             $_SESSION['user'] = $fetch->fetch(PDO::FETCH_ASSOC);
             
             if ($action === 'register') {

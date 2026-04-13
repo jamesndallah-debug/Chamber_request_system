@@ -21,6 +21,7 @@ try {
 
 // Handle admin actions for leave balance management
 if ($canAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf_post();
 	$action = $_POST['admin_action'] ?? '';
 	
 	if ($action === 'reset_user_leave') {
@@ -116,17 +117,17 @@ try {
 	<script src="https://cdn.tailwindcss.com"></script>
 	<style>
 		body {
-			background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+			background-color: #f9fafb;
 			overflow-x: hidden;
+            color: #1f2937;
 		}
 		
-		/* Glass effect */
+		/* Glass effect replacement for bright theme */
 		.glass {
-			background: rgba(255, 255, 255, 0.05);
-			backdrop-filter: blur(10px);
-			border: 1px solid rgba(255, 255, 255, 0.1);
+			background: #ffffff;
+			border: 1px solid #e5e7eb;
 			border-radius: 12px;
-			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+			box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 		}
 		
 		/* Custom scrollbar */
@@ -141,22 +142,22 @@ try {
 		}
 		
 		.custom-scrollbar::-webkit-scrollbar-thumb {
-			background: rgba(255, 255, 255, 0.3);
+			background: rgba(0, 0, 0, 0.2);
 			border-radius: 4px;
 		}
 		
 		.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-			background: rgba(255, 255, 255, 0.5);
+			background: rgba(0, 0, 0, 0.3);
 		}
 	</style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="bg-gray-50 text-gray-900 min-h-screen">
 	<?php include __DIR__ . '/sidebar.php'; ?>
 	
 	<!-- Fixed header -->
-	<header class="fixed top-0 left-64 right-0 bg-gray-800/80 backdrop-blur-sm border-b border-gray-700 z-50">
+	<header class="fixed top-0 left-64 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 z-50">
 		<div class="px-6 py-4">
-			<h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
+			<h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
 				Leave Balances Dashboard
 			</h1>
 		</div>
@@ -166,19 +167,19 @@ try {
 	<main class="ml-64 pt-20 p-6 min-h-screen overflow-x-hidden custom-scrollbar">
 		<!-- Success/Error Messages -->
 		<?php if (isset($success_message)): ?>
-		<div class="glass p-4 mb-6 border-l-4 border-green-500 bg-green-500/10">
+		<div class="glass p-4 mb-6 border-l-4 border-green-500 bg-green-50">
 			<div class="flex items-center">
-				<i class="fas fa-check-circle text-green-400 mr-3"></i>
-				<p class="text-green-300"><?= e($success_message) ?></p>
+				<i class="fas fa-check-circle text-green-600 mr-3"></i>
+				<p class="text-green-700"><?= e($success_message) ?></p>
 			</div>
 		</div>
 		<?php endif; ?>
 		
 		<?php if (isset($error_message)): ?>
-		<div class="glass p-4 mb-6 border-l-4 border-red-500 bg-red-500/10">
+		<div class="glass p-4 mb-6 border-l-4 border-red-500 bg-red-50">
 			<div class="flex items-center">
-				<i class="fas fa-exclamation-circle text-red-400 mr-3"></i>
-				<p class="text-red-300"><?= e($error_message) ?></p>
+				<i class="fas fa-exclamation-circle text-red-600 mr-3"></i>
+				<p class="text-red-700"><?= e($error_message) ?></p>
 			</div>
 		</div>
 		<?php endif; ?>
@@ -186,23 +187,24 @@ try {
 		<!-- Admin Controls (Only for Admin users) -->
 		<?php if ($canAdmin): ?>
 		<div class="glass p-6 mb-6">
-			<h3 class="text-lg font-semibold text-white mb-4">
-				<i class="fas fa-cogs mr-2 text-blue-400"></i>Admin Controls - Leave Balance Management
+			<h3 class="text-lg font-semibold text-gray-800 mb-4">
+				<i class="fas fa-cogs mr-2 text-blue-600"></i>Admin Controls - Leave Balance Management
 			</h3>
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 				<!-- Reset Single User -->
-				<div class="bg-gray-800/50 p-4 rounded-lg">
-					<h4 class="text-md font-medium text-white mb-3">Reset Single User Leave</h4>
+				<div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+					<h4 class="text-md font-medium text-gray-800 mb-3">Reset Single User Leave</h4>
 					<form method="POST" class="space-y-3">
+                        <?= csrf_field() ?>
 						<input type="hidden" name="admin_action" value="reset_user_leave">
 						<div>
-							<label class="block text-sm text-gray-300 mb-1">User ID</label>
-							<input class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+							<label class="block text-sm text-gray-600 mb-1">User ID</label>
+							<input class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 								   type="number" name="target_user_id" required min="1">
 						</div>
 						<div>
-							<label class="block text-sm text-gray-300 mb-1">Leave Type</label>
-							<select class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+							<label class="block text-sm text-gray-600 mb-1">Leave Type</label>
+							<select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 									name="leave_type" required>
 								<option value="">Select Leave Type</option>
 								<option value="Annual leave">Annual Leave (28 days)</option>
@@ -212,8 +214,8 @@ try {
 							</select>
 						</div>
 						<div>
-							<label class="block text-sm text-gray-300 mb-1">Year</label>
-							<input class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+							<label class="block text-sm text-gray-600 mb-1">Year</label>
+							<input class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 								   type="number" name="target_year" value="<?= date('Y') ?>" required>
 						</div>
 						<button class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
@@ -223,13 +225,14 @@ try {
 				</div>
 				
 				<!-- Reset All Users for Specific Leave Type -->
-				<div class="bg-gray-800/50 p-4 rounded-lg">
-					<h4 class="text-md font-medium text-white mb-3">Reset All Users - Specific Leave Type</h4>
+				<div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+					<h4 class="text-md font-medium text-gray-800 mb-3">Reset All Users - Specific Leave Type</h4>
 					<form method="POST" class="space-y-3" onsubmit="return confirm('Are you sure you want to reset this leave type for ALL users? This action cannot be undone.')">
+                        <?= csrf_field() ?>
 						<input type="hidden" name="admin_action" value="reset_all_leave_type">
 						<div>
-							<label class="block text-sm text-gray-300 mb-1">Leave Type</label>
-							<select class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+							<label class="block text-sm text-gray-600 mb-1">Leave Type</label>
+							<select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 									name="leave_type" required>
 								<option value="">Select Leave Type</option>
 								<option value="Annual leave">Annual Leave (28 days)</option>
@@ -239,11 +242,11 @@ try {
 							</select>
 						</div>
 						<div>
-							<label class="block text-sm text-gray-300 mb-1">Year</label>
-							<input class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+							<label class="block text-sm text-gray-600 mb-1">Year</label>
+							<input class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 								   type="number" name="target_year" value="<?= date('Y') ?>" required>
 						</div>
-						<div class="text-sm text-yellow-300 bg-yellow-500/10 p-2 rounded border border-yellow-500/20">
+						<div class="text-sm text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
 							<i class="fas fa-exclamation-triangle mr-1"></i>
 							Warning: This will reset the selected leave type for ALL users.
 						</div>
@@ -254,16 +257,17 @@ try {
 				</div>
 				
 				<!-- Reset All Leave Types for All Users -->
-				<div class="bg-gray-800/50 p-4 rounded-lg">
-					<h4 class="text-md font-medium text-white mb-3">Reset Everything</h4>
+				<div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+					<h4 class="text-md font-medium text-gray-800 mb-3">Reset Everything</h4>
 					<form method="POST" class="space-y-3" onsubmit="return confirm('⚠️ DANGER: This will reset ALL leave types for ALL users! Are you absolutely sure?')">
+                        <?= csrf_field() ?>
 						<input type="hidden" name="admin_action" value="reset_all_users_all_types">
 						<div>
-							<label class="block text-sm text-gray-300 mb-1">Year</label>
-							<input class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+							<label class="block text-sm text-gray-600 mb-1">Year</label>
+							<input class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 								   type="number" name="target_year" value="<?= date('Y') ?>" required>
 						</div>
-						<div class="text-sm text-red-300 bg-red-500/10 p-3 rounded border border-red-500/20">
+						<div class="text-sm text-red-700 bg-red-50 p-3 rounded border border-red-200">
 							<i class="fas fa-skull-crossbones mr-1"></i>
 							<strong>DANGER ZONE:</strong> This will reset ALL leave balances for ALL users:
 							<ul class="mt-2 text-xs list-disc list-inside">
@@ -287,14 +291,14 @@ try {
 			<form class="flex flex-wrap gap-4 items-end" method="GET" action="index.php">
 				<input type="hidden" name="action" value="leave_balances">
 				<div>
-					<label class="block text-sm text-gray-300 mb-2">Year</label>
-					<input class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+					<label class="block text-sm text-gray-600 mb-2">Year</label>
+					<input class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 						   type="number" name="year" value="<?= e($filterYear) ?>">
 				</div>
 				<?php if ($canAdmin): ?>
 				<div>
-					<label class="block text-sm text-gray-300 mb-2">User ID (optional)</label>
-					<input class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+					<label class="block text-sm text-gray-600 mb-2">User ID (optional)</label>
+					<input class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
 						   type="number" name="user_id" value="<?= e($filterUser ?: '') ?>">
 				</div>
 				<?php endif; ?>
@@ -308,55 +312,55 @@ try {
 
 		<!-- Leave Balances Table -->
 		<div class="glass overflow-hidden mb-6">
-			<div class="px-6 py-4 border-b border-gray-700">
-				<h2 class="text-lg font-semibold text-white">Current Leave Balances</h2>
+			<div class="px-6 py-4 border-b border-gray-200">
+				<h2 class="text-lg font-semibold text-gray-800">Current Leave Balances</h2>
 			</div>
 			<div class="overflow-x-auto custom-scrollbar">
 				<table class="min-w-full text-sm">
-					<thead class="bg-gray-800">
+					<thead class="bg-gray-50">
 						<tr>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">User</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Username</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Leave Type</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Year</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Balance (days)</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Last Reset</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance (days)</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Reset</th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-gray-700">
+					<tbody class="divide-y divide-gray-200">
 					<?php if (empty($rows)): ?>
 						<tr>
-							<td colspan="6" class="px-6 py-8 text-center text-gray-400">
+							<td colspan="6" class="px-6 py-8 text-center text-gray-500">
 								<i class="fas fa-calendar-times text-3xl mb-2"></i>
 								<p>No balances found.</p>
 							</td>
 						</tr>
 					<?php else: foreach ($rows as $r): ?>
-						<tr class="hover:bg-gray-700/50 transition-colors duration-200">
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($r['fullname']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($r['username']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300">
+						<tr class="hover:bg-gray-50 transition-colors duration-200">
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($r['fullname']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($r['username']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700">
 								<?= e($r['leave_type']) ?>
 								<?php if ($r['leave_type'] === 'Annual leave' && $r['balance_days'] == 28): ?>
-									<span class="ml-2 px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded-full">
+									<span class="ml-2 px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
 										<i class="fas fa-sync-alt mr-1"></i>Fresh
 									</span>
 								<?php endif; ?>
 							</td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($r['year']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap font-semibold text-blue-400"><?= e($r['balance_days']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300">
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($r['year']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap font-semibold text-blue-600"><?= e($r['balance_days']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700">
 								<?php if ($r['last_reset_date']): ?>
 									<?= date('d/m/Y', strtotime($r['last_reset_date'])) ?>
 									<?php 
 									$days_since_reset = (strtotime(date('Y-m-d')) - strtotime($r['last_reset_date'])) / (60 * 60 * 24);
 									if ($days_since_reset >= 365): ?>
-										<span class="ml-2 px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded-full">
+										<span class="ml-2 px-2 py-1 text-xs bg-yellow-50 text-yellow-700 rounded-full">
 											<i class="fas fa-exclamation-triangle mr-1"></i>Due Reset
 										</span>
 									<?php endif; ?>
 								<?php else: ?>
-									<span class="text-gray-500 italic">Not set</span>
+									<span class="text-gray-400 italic">Not set</span>
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -368,41 +372,41 @@ try {
 
 		<!-- Recent Logs Table -->
 		<div class="glass overflow-hidden">
-			<div class="px-6 py-4 border-b border-gray-700">
-				<h2 class="text-lg font-semibold text-white">Recent Leave Balance Logs</h2>
+			<div class="px-6 py-4 border-b border-gray-200">
+				<h2 class="text-lg font-semibold text-gray-800">Recent Leave Balance Logs</h2>
 			</div>
 			<div class="overflow-x-auto custom-scrollbar">
 				<table class="min-w-full text-sm">
-					<thead class="bg-gray-800">
+					<thead class="bg-gray-50">
 						<tr>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Time</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">User</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Leave Type</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Change</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Balance After</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Reason</th>
-							<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Request ID</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Change</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance After</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-gray-700">
+					<tbody class="divide-y divide-gray-200">
 					<?php if (empty($logs)): ?>
 						<tr>
-							<td colspan="7" class="px-6 py-8 text-center text-gray-400">
+							<td colspan="7" class="px-6 py-8 text-center text-gray-500">
 								<i class="fas fa-history text-3xl mb-2"></i>
 								<p>No logs found.</p>
 							</td>
 						</tr>
 					<?php else: foreach ($logs as $l): ?>
-						<tr class="hover:bg-gray-700/50 transition-colors duration-200">
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($l['created_at']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($l['fullname']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($l['leave_type']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap <?= ($l['change_days'] < 0 ? 'text-red-400' : 'text-green-400') ?> font-semibold">
+						<tr class="hover:bg-gray-50 transition-colors duration-200">
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($l['created_at']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($l['fullname']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($l['leave_type']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap <?= ($l['change_days'] < 0 ? 'text-red-600' : 'text-green-600') ?> font-semibold">
 								<?= e($l['change_days']) ?>
 							</td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($l['balance_after']) ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($l['reason'] ?? '') ?></td>
-							<td class="px-6 py-4 whitespace-nowrap text-gray-300"><?= e($l['request_id'] ?? '') ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($l['balance_after']) ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($l['reason'] ?? '') ?></td>
+							<td class="px-6 py-4 whitespace-nowrap text-gray-700"><?= e($l['request_id'] ?? '') ?></td>
 						</tr>
 					<?php endforeach; endif; ?>
 					</tbody>

@@ -1,6 +1,6 @@
 <?php
-// FILE: finance_dashboard.php
-// Dashboard for Finance to view requests and manage vouchers
+// FILE: ceo_dashboard.php
+// Dashboard for Chief Executive Officer (CEO) to view requests and vouchers
 
 // Check if this file is being accessed directly
 if (!isset($pdo)) {
@@ -19,17 +19,19 @@ if (!isset($pdo)) {
     session_start();
     $user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
     
-    // Redirect if not Finance
-    if (!$user || (int)$user['role_id'] !== 5) {
+    // Redirect if not CEO
+    if (!$user || (int)$user['role_id'] !== 4) {
         header('Location: index.php?action=login');
         exit;
     }
 }
+?>
 
-// Get all requests for Finance
+<?php
+// Get all requests for CEO
 $requests = $requestModel->get_requests_for_role($user['role_id'], $user);
 
-// Get Finance user's own requests for "My Requests" tab
+// Get CEO user's own requests for "My Requests" tab (if CEO submits requests)
 $my_requests = $requestModel->get_my_requests($user['user_id']);
 
 // Filter out any null or invalid requests
@@ -37,7 +39,7 @@ $requests = array_filter($requests, function($request) {
     return is_array($request) && !empty($request);
 });
 
-// Get all vouchers for Finance
+// Get all vouchers for CEO
 $vouchers = $voucherModel->get_vouchers_for_role($user['role_id'], $user['user_id']);
 
 // Filter out any null or invalid vouchers
@@ -48,18 +50,12 @@ $vouchers = array_filter($vouchers, function($voucher) {
 // Count unread voucher messages
 $unread_count = $voucherModel->count_unread_messages($user['user_id']);
 
-// Filter financial requests
-$financial_request_types = ['Imprest request', 'Reimbursement request', 'Salary advance', 'Retirement', 'TNCC retirement request'];
-$financial_requests = array_filter($requests, function($request) use ($financial_request_types) {
-    return in_array($request['request_type'], $financial_request_types);
-});
-
 // Count requests by status
 $pending_count = 0;
 $approved_count = 0;
 $rejected_count = 0;
 
-foreach ($financial_requests as $request) {
+foreach ($requests as $request) {
     if ($request['status_name'] === 'pending') {
         $pending_count++;
     } elseif ($request['status_name'] === 'approved') {
@@ -75,47 +71,50 @@ $approved_vouchers = 0;
 $rejected_vouchers = 0;
 
 foreach ($vouchers as $voucher) {
-    if ($voucher['finance_status'] === 'pending') {
+    if ($voucher['ceo_status'] === 'pending') {
         $pending_vouchers++;
-    } elseif ($voucher['finance_status'] === 'approved') {
+    } elseif ($voucher['ceo_status'] === 'approved') {
         $approved_vouchers++;
-    } elseif ($voucher['finance_status'] === 'rejected') {
+    } elseif ($voucher['ceo_status'] === 'rejected') {
         $rejected_vouchers++;
     }
 }
-
-// Count vouchers by CEO status
-$ed_pending_count = 0;
-$ed_approved_count = 0;
-$ed_rejected_count = 0;
-
-foreach ($vouchers as $voucher) {
-    if ($voucher['ed_status'] === 'pending') {
-        $ed_pending_count++;
-    } elseif ($voucher['ed_status'] === 'approved') {
-        $ed_approved_count++;
-    } elseif ($voucher['ed_status'] === 'rejected') {
-        $ed_rejected_count++;
-    }
-}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Finance Dashboard | Chamber Request System</title>
+    <title>CEO Dashboard | Chamber Request System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="assets/ui.css">
     <style>
-        /* Local overrides/additions */
+        body{font-family:'Inter',sans-serif}
+        /* Removed orb-bg */
+        
+        /* Enhanced styles for better UI */
+        .text-brand-gold { color: #d4af37; }
+        .text-brand-blue { color: #0b5ed7; }
+        .text-brand-green { color: #16a34a; }
+        
+        /* Improved text clarity */
+        body {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 {
+            letter-spacing: -0.01em;
+        }
+        
+        /* Search input styling */
         .search-container {
             position: relative;
         }
         .search-container input {
             padding-left: 40px;
+            transition: all 0.2s ease;
         }
         .search-container svg {
             position: absolute;
@@ -123,6 +122,9 @@ foreach ($vouchers as $voucher) {
             top: 50%;
             transform: translateY(-50%);
             color: #64748b;
+        }
+        .search-container input:focus {
+            box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.2);
         }
         
         /* Tab styling */
@@ -155,6 +157,17 @@ foreach ($vouchers as $voucher) {
         }
         
         /* Badge styling */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-weight: 400;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
         .badge-pending {
             background-color: #fef3c7;
             color: #92400e;
@@ -184,43 +197,6 @@ foreach ($vouchers as $voucher) {
             align-items: center;
             justify-content: center;
         }
-
-        /* Status filter styles */
-        .status-filter {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .status-filter button {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: none;
-            font-weight: 400;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .status-filter button.active {
-            background-color: #0b5ed7;
-            color: white;
-        }
-        .status-filter button:not(.active) {
-            background-color: #f1f5f9;
-            color: #475569;
-        }
-        .status-filter button:hover:not(.active) {
-            background-color: #e2e8f0;
-        }
-        .status-count {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            border-radius: 12px;
-            background-color: rgba(0, 0, 0, 0.1);
-            margin-left: 8px;
-            font-size: 12px;
-        }
     </style>
 </head>
 <body class="bg-gray-50 flex min-h-screen">
@@ -229,7 +205,7 @@ foreach ($vouchers as $voucher) {
 
     <div class="flex-1 flex flex-col">
         <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-6 flex items-center justify-between text-gray-800 shadow-sm">
-            <h1 class="text-3xl font-semibold">Finance Dashboard</h1>
+            <h1 class="text-3xl font-semibold">Chief Executive Officer Dashboard</h1>
             <div class="flex items-center gap-4">
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search requests or vouchers..." class="bg-white border border-gray-300 rounded-lg py-2 px-4 text-gray-800 placeholder-gray-400 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -249,7 +225,7 @@ foreach ($vouchers as $voucher) {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white/80 backdrop-blur p-6 rounded-xl shadow-lg ring-1 ring-black/5">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-800">Financial Requests</h3>
+                        <h3 class="text-lg font-semibold text-gray-800">Pending Requests</h3>
                         <div class="bg-yellow-100 p-2 rounded-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -257,35 +233,35 @@ foreach ($vouchers as $voucher) {
                         </div>
                     </div>
                     <div class="mt-4">
-                        <span class="text-3xl font-bold text-gray-900"><?= count($financial_requests) ?></span>
+                        <span class="text-3xl font-bold text-gray-900"><?= $pending_count ?></span>
                     </div>
                 </div>
                 
                 <div class="bg-white/80 backdrop-blur p-6 rounded-xl shadow-lg ring-1 ring-black/5">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-800">Created Vouchers</h3>
+                        <h3 class="text-lg font-semibold text-gray-800">Approved Requests</h3>
                         <div class="bg-green-100 p-2 rounded-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <span class="text-3xl font-bold text-gray-900"><?= $approved_count ?></span>
+                    </div>
+                </div>
+                
+                <div class="bg-white/80 backdrop-blur p-6 rounded-xl shadow-lg ring-1 ring-black/5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-800">Pending Vouchers</h3>
+                        <div class="bg-blue-100 p-2 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </div>
                     </div>
                     <div class="mt-4">
-                        <span class="text-3xl font-bold text-gray-900"><?= count($vouchers) ?></span>
-                    </div>
-                </div>
-                
-                <div class="bg-white/80 backdrop-blur p-6 rounded-xl shadow-lg ring-1 ring-black/5">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-800">CEO Pending</h3>
-                        <div class="bg-blue-100 p-2 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <span class="text-3xl font-bold text-gray-900"><?= $ed_pending_count ?></span>
+                        <span class="text-3xl font-bold text-gray-900"><?= $pending_vouchers ?></span>
                     </div>
                 </div>
                 
@@ -308,42 +284,28 @@ foreach ($vouchers as $voucher) {
             <div class="bg-white/80 backdrop-blur rounded-xl shadow-lg ring-1 ring-black/5 mb-8">
                 <div class="border-b border-gray-200">
                     <div class="flex p-4 space-x-8">
-                        <div class="tab active text-blue-600 font-semibold" data-target="requests">Financial Requests <span class="status-count"><?= count($financial_requests) ?></span></div>
-                        <div class="tab text-gray-600 font-semibold" data-target="vouchers">Vouchers <span class="status-count"><?= count($vouchers) ?></span></div>
-                    </div>
-                </div>
-                
-                <!-- Search Bar -->
-                <div class="search-container px-6 pt-4 flex justify-between items-center">
-                    <div class="flex-1 mr-4">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="searchInput" class="search-input bg-gray-100 w-full" placeholder="Search by ID, type, title, employee name...">
-                    </div>
-                    <div>
-                        <a href="index.php?action=export_financial_requests" class="btn btn-success inline-flex items-center gap-2">
-                            <i class="fas fa-file-excel"></i>
-                            Export to Excel
-                        </a>
+                        <div class="tab active text-blue-600 font-semibold" data-target="requests">Requests</div>
+                        <div class="tab text-gray-600 font-semibold" data-target="vouchers">Vouchers <?php if ($pending_vouchers > 0): ?><span class="ml-1 bg-red-500 text-white rounded-full px-2 py-0.5 text-xs"><?= $pending_vouchers ?></span><?php endif; ?></div>
                     </div>
                 </div>
                 
                 <!-- Requests Tab Content -->
                 <div id="requests-tab" class="p-6">
                     <div class="status-filter">
-                        <button type="button" class="req-filter-btn active" data-filter="all">All <span class="status-count"><?= count($financial_requests) ?></span></button>
-                        <button type="button" class="req-filter-btn" data-filter="pending">Pending <span class="status-count"><?= $pending_count ?></span></button>
-                        <button type="button" class="req-filter-btn" data-filter="approved">Approved <span class="status-count"><?= $approved_count ?></span></button>
-                        <button type="button" class="req-filter-btn" data-filter="rejected">Rejected <span class="status-count"><?= $rejected_count ?></span></button>
+                        <button class="ceo-req-filter active" data-filter="all">All <span class="status-count"><?= count($requests) ?></span></button>
+                        <button class="ceo-req-filter" data-filter="pending">Pending <span class="status-count"><?= $pending_count ?></span></button>
+                        <button class="ceo-req-filter" data-filter="approved">Approved <span class="status-count"><?= $approved_count ?></span></button>
+                        <button class="ceo-req-filter" data-filter="rejected">Rejected <span class="status-count"><?= $rejected_count ?></span></button>
                     </div>
                     <div class="grid grid-cols-1 gap-6">
-                        <?php if (empty($financial_requests)): ?>
+                        <?php if (empty($requests)): ?>
                             <div class="text-center py-8">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                <div class="text-gray-500">No financial requests found.</div>
+                                <div class="text-gray-500">No requests found.</div>
                             </div>
-                        <?php else: foreach ($financial_requests as $request): ?>
+                        <?php else: foreach ($requests as $request): ?>
                             <div class="request-card bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 request-item" data-status="<?= strtolower($request['status_name']) ?>">
                                 <div class="p-5">
                                     <div class="flex justify-between items-start">
@@ -366,31 +328,13 @@ foreach ($vouchers as $voucher) {
                                         } elseif ($request['status_name'] === 'rejected') {
                                             $statusClass = 'badge-rejected';
                                         }
-                                        
-                                        // Check if voucher exists for this request
-                                        $has_voucher = false;
-                                        if ($request['status_name'] === 'approved') {
-                                            $has_voucher = $voucherModel->has_voucher_for_request($request['request_id']);
-                                        }
                                         ?>
-                                        <div class="flex items-center gap-2">
-                                            <span class="badge <?= $statusClass ?>"><?= e($request['status_name']) ?></span>
-                                            <?php if ($request['status_name'] === 'approved' && !$has_voucher): ?>
-                                                <span class="badge bg-blue-100 text-blue-800 border border-blue-200">Needs Voucher</span>
-                                            <?php endif; ?>
-                                        </div>
+                                        <span class="badge <?= $statusClass ?>"><?= e($request['status_name']) ?></span>
                                     </div>
                                     <p class="text-gray-700 mb-4 line-clamp-2"><?= e(substr($request['description'], 0, 150)) ?><?= strlen($request['description']) > 150 ? '...' : '' ?></p>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-500"><?= date('M d, Y', strtotime($request['created_at'])) ?></span>
-                                        <div class="flex gap-2">
-                                            <a href="index.php?action=view_request&id=<?= e($request['request_id']) ?>" class="btn btn-primary btn-sm">View Details</a>
-                                        </div>
-                                        <?php if ($request['status_name'] === 'approved' && !$has_voucher): ?>
-                                            <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
-                                                <a href="index.php?action=create_voucher&request_id=<?= e($request['request_id']) ?>" class="btn btn-success btn-sm">Create Voucher</a>
-                                            </div>
-                                        <?php endif; ?>
+                                        <a href="index.php?action=view_request&id=<?= e($request['request_id']) ?>" class="btn btn-primary py-1.5 px-4 text-sm font-medium">View Details</a>
                                     </div>
                                 </div>
                             </div>
@@ -400,14 +344,6 @@ foreach ($vouchers as $voucher) {
                 
                 <!-- Vouchers Tab Content -->
                 <div id="vouchers-tab" class="p-6 hidden">
-                    <!-- Create New Voucher Button -->
-                    <div class="mb-6 flex justify-end">
-                        <a href="index.php?action=select_voucher_type" class="btn btn-success">
-                            <i class="fas fa-plus"></i>
-                            Create Voucher
-                        </a>
-                    </div>
-                    
                     <div class="grid grid-cols-1 gap-6">
                         <?php if (empty($vouchers)): ?>
                             <div class="text-center py-8">
@@ -422,30 +358,20 @@ foreach ($vouchers as $voucher) {
                             $request = $requestModel->get_request_by_id($voucher['request_id']);
                             if (!$request) continue;
                             
-                            // Determine finance status class
-                            $financeStatusClass = '';
-                            if ($voucher['finance_status'] === 'pending') {
-                                $financeStatusClass = 'badge-pending';
-                            } elseif ($voucher['finance_status'] === 'approved') {
-                                $financeStatusClass = 'badge-approved';
-                            } elseif ($voucher['finance_status'] === 'rejected') {
-                                $financeStatusClass = 'badge-rejected';
-                            }
-                            
-                            // Determine CEO status class
-                            $edStatusClass = '';
-                            if ($voucher['ed_status'] === 'pending') {
-                                $edStatusClass = 'badge-pending';
-                            } elseif ($voucher['ed_status'] === 'approved') {
-                                $edStatusClass = 'badge-approved';
-                            } elseif ($voucher['ed_status'] === 'rejected') {
-                                $edStatusClass = 'badge-rejected';
+                            // Determine status class
+                            $statusClass = '';
+                            if ($voucher['ceo_status'] === 'pending') { // CEO status
+                                $statusClass = 'badge-pending';
+                            } elseif ($voucher['ceo_status'] === 'approved') { // CEO status
+                                $statusClass = 'badge-approved';
+                            } elseif ($voucher['ceo_status'] === 'rejected') { // CEO status
+                                $statusClass = 'badge-rejected';
                             }
                             
                             // Check for unread messages
-                            $has_unread = $voucherModel->has_unread_messages($voucher['voucher_id'], $user['user_id']);
+                            $has_unread = $voucherModel->has_unread_messages($voucher['id'], $user['user_id']);
                             ?>
-                            <div class="request-card bg-gray-50 rounded-lg shadow-md overflow-hidden border border-gray-200 voucher-item hover:shadow-lg transition-shadow duration-200">
+                            <div class="request-card bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 voucher-item hover:shadow-lg transition-shadow duration-200">
                                 <div class="p-5">
                                     <div class="flex justify-between items-start">
                                         <div>
@@ -455,7 +381,7 @@ foreach ($vouchers as $voucher) {
                                                 <?php else: ?>
                                                     <i class="fas fa-credit-card text-blue-600"></i>
                                                 <?php endif; ?>
-                                                PV #<?= e($voucher['pv_no']) ?>
+                                                PV #<?= e($voucher['pv_number']) ?>
                                                 <?php if ($has_unread): ?>
                                                 <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
                                                     <i class="fas fa-envelope-open-text text-xs"></i> New Message
@@ -463,7 +389,7 @@ foreach ($vouchers as $voucher) {
                                                 <?php endif; ?>
                                             </h3>
                                             <div class="flex items-center gap-2 mb-3">
-                                                <span class="text-sm text-gray-600">Voucher #<?= e($voucher['voucher_id']) ?></span>
+                                                <span class="text-sm text-gray-600">Voucher #<?= e($voucher['id']) ?></span>
                                                 <span class="text-sm text-gray-600">•</span>
                                                 <span class="text-sm text-gray-600">Request #<?= e($voucher['request_id']) ?></span>
                                                 <span class="text-sm text-gray-600">•</span>
@@ -472,29 +398,16 @@ foreach ($vouchers as $voucher) {
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <div class="flex flex-col items-end gap-1">
-                                                <span class="text-xs text-gray-500">Finance:</span>
-                                                <span class="badge <?= $financeStatusClass ?> flex items-center gap-1">
-                                                    <?php if ($voucher['finance_status'] === 'approved'): ?>
+                                                <span class="text-xs text-gray-500">Status:</span>
+                                                <span class="badge <?= $statusClass ?> flex items-center gap-1">
+                                                    <?php if ($voucher['ceo_status'] === 'approved'): // CEO status ?>
                                                         <i class="fas fa-check-circle text-green-600"></i>
-                                                    <?php elseif ($voucher['finance_status'] === 'rejected'): ?>
+                                                    <?php elseif ($voucher['ceo_status'] === 'rejected'): // CEO status ?>
                                                         <i class="fas fa-times-circle text-red-600"></i>
                                                     <?php else: ?>
                                                         <i class="fas fa-clock text-yellow-600"></i>
                                                     <?php endif; ?>
-                                                    <?= e($voucher['finance_status']) ?>
-                                                </span>
-                                            </div>
-                                            <div class="flex flex-col items-end gap-1">
-                                                <span class="text-xs text-gray-500">CEO:</span>
-                                                <span class="badge <?= $edStatusClass ?> flex items-center gap-1">
-                                                    <?php if ($voucher['ed_status'] === 'approved'): ?>
-                                                        <i class="fas fa-check-circle text-green-600"></i>
-                                                    <?php elseif ($voucher['ed_status'] === 'rejected'): ?>
-                                                        <i class="fas fa-times-circle text-red-600"></i>
-                                                    <?php else: ?>
-                                                        <i class="fas fa-clock text-yellow-600"></i>
-                                                    <?php endif; ?>
-                                                    <?= e($voucher['ed_status']) ?>
+                                                    <?= e($voucher['ceo_status']) // CEO status ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -502,29 +415,29 @@ foreach ($vouchers as $voucher) {
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                         <div>
                                             <p class="text-sm text-gray-500">Payee</p>
-                                            <p class="text-gray-700 font-medium"><?= e($voucher['payee_name']) ?></p>
+                                            <p class="text-gray-700 font-medium"><?= e($voucher['payee']) ?></p>
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500">Amount</p>
                                             <p class="text-gray-700 font-medium font-mono">TShs <?= number_format($voucher['amount'], 2) ?></p>
                                         </div>
                                         <div>
-                                            <p class="text-sm text-gray-500">Created</p>
-                                            <p class="text-gray-700"><?= date('M d, Y', strtotime($voucher['created_at'])) ?></p>
+                                            <p class="text-sm text-gray-500">Prepared By</p>
+                                            <p class="text-gray-700"><?= e($voucher['prepared_by_name'] ?: 'Finance Manager') ?></p>
                                         </div>
                                     </div>
                                     <div class="flex justify-between items-center border-t border-gray-200 pt-3 mt-2">
                                         <div>
-                                            <?php if ($voucher['finance_status'] === 'pending'): ?>
+                                            <?php if ($voucher['ceo_status'] === 'pending'): ?>
                                                 <span class="text-sm text-yellow-600 font-medium"><i class="fas fa-exclamation-circle"></i> Needs your approval</span>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <a href="index.php?action=view_voucher&id=<?= e($voucher['voucher_id']) ?>" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-eye"></i> View
+                                        <div class="flex gap-2">
+                                            <a href="index.php?action=view_voucher&id=<?= e($voucher['id']) ?>" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-eye"></i> View Voucher
                                             </a>
-                                            <?php if ($voucher['finance_status'] === 'approved' && $voucher['ed_status'] === 'approved'): ?>
-                                                <button onclick="window.open('index.php?action=view_voucher&id=<?= e($voucher['voucher_id']) ?>&print=true', '_blank')" class="btn btn-secondary btn-sm">
+                                            <?php if ($voucher['finance_status'] === 'approved' && $voucher['ceo_status'] === 'approved'): ?>
+                                                <button onclick="window.open('index.php?action=view_voucher&id=<?= e($voucher['id']) ?>&print=true', '_blank')" class="btn btn-secondary btn-sm">
                                                     <i class="fas fa-print"></i> Print
                                                 </button>
                                             <?php endif; ?>
@@ -597,16 +510,15 @@ foreach ($vouchers as $voucher) {
                 }
             });
         });
-
-        const reqFilterBtns = document.querySelectorAll('.req-filter-btn');
-        const reqItems = document.querySelectorAll('#requests-tab .request-item');
-        reqFilterBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                reqFilterBtns.forEach(b => b.classList.remove('active'));
+        
+        const ceoFilterBtns = document.querySelectorAll('.ceo-req-filter');
+        const ceoReqItems = document.querySelectorAll('#requests-tab .request-item');
+        ceoFilterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                ceoFilterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 const filter = btn.getAttribute('data-filter');
-                reqItems.forEach(item => {
+                ceoReqItems.forEach(item => {
                     const status = item.getAttribute('data-status');
                     if (filter === 'all' || status === filter) {
                         item.style.display = '';

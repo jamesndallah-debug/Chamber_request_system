@@ -37,7 +37,7 @@ if (!$voucher) {
 
 // Determine if user can approve this voucher
 $can_approve = false;
-if ($user['role_id'] == 4 && $voucher['ed_status'] == 'pending') {
+if ($user['role_id'] == 4 && $voucher['ed_status'] == 'pending') { // CEO role checks pending status
     $can_approve = true;
 } elseif ($user['role_id'] == 5 && $voucher['finance_status'] == 'pending') {
     $can_approve = true;
@@ -77,32 +77,32 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            background-color: #f9fafb;
             min-height: 100vh;
-            color: #f8fafc;
+            color: #1f2937;
         }
         
         /* Enhanced visibility styles */
         .voucher-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            background: #ffffff;
             color: #1e293b;
             border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e5e7eb;
             transition: all 0.3s ease;
         }
         
         .voucher-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
         }
         
         .section-header {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #0b5ed7 0%, #0ea5e9 100%);
             color: white;
             padding: 1rem 1.5rem;
             border-radius: 12px 12px 0 0;
-            font-weight: 700;
+            font-weight: 400;
             font-size: 1.1rem;
             display: flex;
             align-items: center;
@@ -123,23 +123,24 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
         }
         
         .info-item {
-            background: #f8fafc;
+            background: #f9fafb;
             padding: 1.5rem;
             border-radius: 12px;
             border-left: 4px solid #3b82f6;
             transition: all 0.2s ease;
+            border: 1px solid #f3f4f6;
         }
         
         .info-item:hover {
-            background: #f1f5f9;
-            border-left-color: #1d4ed8;
+            background: #f3f4f6;
+            border-left-color: #2563eb;
             transform: translateX(4px);
         }
         
         .info-label {
             font-size: 0.875rem;
-            font-weight: 600;
-            color: #64748b;
+            font-weight: 400;
+            color: #6b7280;
             margin-bottom: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -147,14 +148,14 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
         
         .info-value {
             font-size: 1.125rem;
-            font-weight: 700;
-            color: #1e293b;
+            font-weight: 400;
+            color: #111827;
             line-height: 1.4;
         }
         
         .amount-highlight {
             font-size: 1.5rem;
-            font-weight: 800;
+            font-weight: 400;
             color: #059669;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
@@ -165,7 +166,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
             gap: 0.5rem;
             padding: 0.75rem 1.25rem;
             border-radius: 9999px;
-            font-weight: 700;
+            font-weight: 400;
             font-size: 0.875rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -187,75 +188,22 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
             color: #7f1d1d;
         }
         
-        .btn {
-            padding: 0.875rem 1.75rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            border: none;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(107, 114, 128, 0.4);
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-        }
-        
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4);
-        }
+        /* Removed inline .btn styles to use global assets/ui.css */
         
         .page-header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: #ffffff;
             padding: 2rem;
             border-radius: 16px;
             margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e5e7eb;
         }
         
         .page-title {
             font-size: 2rem;
-            font-weight: 800;
-            color: #ffffff;
+            font-weight: 400;
+            color: #111827;
             margin: 0;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .voucher-type-badge {
@@ -264,7 +212,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
             gap: 0.75rem;
             padding: 0.75rem 1.5rem;
             border-radius: 9999px;
-            font-weight: 700;
+            font-weight: 400;
             font-size: 0.875rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -287,7 +235,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
             border: 2px solid #e2e8f0;
             border-radius: 12px;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 400;
             color: #1e293b;
             background: #ffffff;
             transition: all 0.2s ease;
@@ -322,13 +270,21 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
-    <div class="flex min-h-screen">
-        <?php include __DIR__ . '/sidebar.php'; ?>
+<body class="bg-gray-50 text-gray-900">
+    <div class="min-h-screen">
+        <!-- Back to Dashboard Button -->
+        <div class="fixed top-4 left-4 z-50">
+            <a href="index.php?action=dashboard" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span class="font-medium">Back to Dashboard</span>
+            </a>
+        </div>
         
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex flex-col overflow-hidden pt-16">
             <main class="flex-1 overflow-x-hidden overflow-y-auto p-6">
-                <div class="container mx-auto px-4 py-8">
+                <div class="max-w-7xl mx-auto px-4 py-8">
                     <!-- Enhanced Page Header -->
                     <div class="page-header">
                         <div class="flex justify-between items-start">
@@ -397,7 +353,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
                                     <div class="info-label">Request Status</div>
                                     <div class="info-value">
                                         <?php 
-                                        $status = $request['ed_status'] ?? 'pending';
+                                        $status = $request['ed_status'] ?? 'pending'; // CEO status field
                                         $statusClass = $status == 'approved' ? 'status-approved' : ($status == 'rejected' ? 'status-rejected' : 'status-pending');
                                         $statusIcon = $status == 'approved' ? 'fa-check-circle' : ($status == 'rejected' ? 'fa-times-circle' : 'fa-clock');
                                         ?>
@@ -508,7 +464,7 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
         page-break-inside: avoid;
         break-inside: avoid;
     }
-    /* Remove CSS-injected TCCIA heading to prevent duplicates */
+    /* Remove CSS-injected TNCC heading to prevent duplicates */
     .voucher-container:before { content: none !important; display: none !important; }
     
     /* Add voucher number watermark */

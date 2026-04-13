@@ -46,15 +46,17 @@ $page_title = ($voucher_type == 'petty_cash') ? 'Create Petty Cash Voucher' : 'C
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            background-color: #f9fafb;
             min-height: 100vh;
+            color: #1f2937;
         }
         
         /* Form styling */
         .form-section {
-            background: rgba(255, 255, 255, 0.95);
+            background: #ffffff;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
             margin-bottom: 1.5rem;
         }
         
@@ -83,7 +85,7 @@ $page_title = ($voucher_type == 'petty_cash') ? 'Create Petty Cash Voucher' : 'C
         .btn {
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
-            font-weight: 500;
+            font-weight: 400;
             transition: all 0.2s;
             text-decoration: none;
             display: inline-flex;
@@ -119,7 +121,7 @@ $page_title = ($voucher_type == 'petty_cash') ? 'Create Petty Cash Voucher' : 'C
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 400;
         }
         
         .badge-payment {
@@ -133,7 +135,7 @@ $page_title = ($voucher_type == 'petty_cash') ? 'Create Petty Cash Voucher' : 'C
         }
         
         .required-text {
-            font-weight: 700;
+            font-weight: 400;
             color: #1f2937;
             background: #f3f4f6;
             padding: 1rem;
@@ -142,26 +144,27 @@ $page_title = ($voucher_type == 'petty_cash') ? 'Create Petty Cash Voucher' : 'C
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
+<body class="bg-gray-50 text-gray-900">
     <div class="min-h-screen p-6">
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-8">
                 <div class="flex items-center justify-center mb-4">
                     <?php if ($voucher_type == 'petty_cash'): ?>
-                        <i class="fas fa-money-bill-wave text-6xl text-green-400 mr-4"></i>
+                        <i class="fas fa-money-bill-wave text-6xl text-green-600 mr-4"></i>
                         <div class="badge badge-petty-cash">Petty Cash Voucher</div>
                     <?php else: ?>
-                        <i class="fas fa-credit-card text-6xl text-blue-400 mr-4"></i>
+                        <i class="fas fa-credit-card text-6xl text-blue-600 mr-4"></i>
                         <div class="badge badge-payment">Payment Voucher</div>
                     <?php endif; ?>
                 </div>
-                <h1 class="text-4xl font-bold text-white mb-2"><?= e($page_title) ?></h1>
-                <p class="text-gray-300">Complete all required fields to create the voucher</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-2"><?= e($page_title) ?></h1>
+                <p class="text-gray-600">Complete all required fields to create the voucher</p>
             </div>
             
             <!-- Voucher Form -->
             <form action="index.php?action=create_voucher" method="post" class="space-y-6">
+                <?= csrf_field() ?>
                 <input type="hidden" name="voucher_type" value="<?= e($voucher_type) ?>">
                 <input type="hidden" name="prepared_by" value="<?= e($user['user_id']) ?>">
                 

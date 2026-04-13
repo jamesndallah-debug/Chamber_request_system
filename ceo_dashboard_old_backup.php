@@ -1,6 +1,6 @@
 <?php
 // FILE: ed_dashboard.php
-// Dashboard for Executive Director (ED) to view requests and vouchers
+// Dashboard for Chief Executive Officer (CEO) to view requests and vouchers
 
 // Check if this file is being accessed directly
 if (!isset($pdo)) {
@@ -19,50 +19,17 @@ if (!isset($pdo)) {
     session_start();
     $user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
     
-    // Redirect if not ED
+    // Redirect if not CEO
     if (!$user || (int)$user['role_id'] !== 4) {
         header('Location: index.php?action=login');
         exit;
     }
 }
-?>
 
-<?php if ((int)$user['role_id'] === 5 && $request['status_name'] === 'approved'): ?>
-    <div class="mb-8">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">Finance Action</h2>
-        <div class="bg-green-50/50 p-5 rounded-lg shadow-sm border border-green-100">
-            <div class="flex justify-end">
-                <a href="index.php?action=create_voucher&request_id=<?= e($request['request_id']) ?>" class="btn btn-primary py-3 px-6 text-base font-medium flex justify-center items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    Create Voucher
-                </a>
-            </div>
-        </div>
-    </div>
-<?php endif; ?><div class="form-group md:col-span-2">
-    <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">Payment Method:</label>
-    <input type="text" id="payment_method" name="payment_method" value="Paid by: Bank transfer" class="form-control" readonly>
-</div><div class="border-b border-gray-200 pb-4 mb-4">
-    <p class="font-bold mb-2">Payment Method: <?= e($voucher['payment_method'] ?: 'Bank transfer') ?></p>
-    <p class="text-sm">This is to certify that the payment has been approved and authorized for the sum of:</p>
-    <p class="font-bold text-lg mt-1"><?= format_amount($voucher['total']) ?> (<?= e($voucher['amount_words'] ?: 'Amount in words not specified') ?>)</p>
-</div>
-
-<?php
-$sql = "INSERT INTO vouchers (request_id, voucher_type, pv_no, date, activity, 
-        payee_name, budget_code, particulars, amount, total, amount_words, payment_method, prepared_by, 
-        finance_status, ed_status, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
-
-// ... and in the execute statement
-$payment_method = $data['payment_method'] ?? 'Paid by: Bank transfer';
-
-// Get all requests for ED
+// Get all requests for CEO
 $requests = $requestModel->get_requests_for_role($user['role_id'], $user);
 
-// Get ED user's own requests for "My Requests" tab (if ED submits requests)
+// Get CEO user's own requests for "My Requests" tab (if CEO submits requests)
 $my_requests = $requestModel->get_my_requests($user['user_id']);
 
 // Filter out any null or invalid requests
@@ -116,16 +83,13 @@ foreach ($vouchers as $voucher) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>ED Dashboard | Chamber Request System</title>
+    <title>CEO Dashboard | Chamber Request System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/ui.css">
     <style>
         body{font-family:'Inter',sans-serif}
-        .orb-bg { position:absolute; inset:-40px; filter:blur(70px); opacity:.35; pointer-events:none; }
-        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#0b5ed710; border:1px solid #0b5ed733; color:#0b5ed7; font-weight:600; }
-        .btn-gradient { background:linear-gradient(90deg,#0b5ed7,#d4af37); color:#fff; }
-        .btn-gradient:hover { filter:brightness(1.05); }
+        /* Removed orb-bg */
         
         /* Enhanced styles for better UI */
         .text-brand-gold { color: #d4af37; }
@@ -146,8 +110,10 @@ foreach ($vouchers as $voucher) {
             position: relative;
         }
         .search-container input {
-            padding-left: 40px;
+            padding-left: 2.75rem;
             transition: all 0.2s ease;
+            position: relative;
+            z-index: 2;
         }
         .search-container svg {
             position: absolute;
@@ -155,6 +121,7 @@ foreach ($vouchers as $voucher) {
             top: 50%;
             transform: translateY(-50%);
             color: #64748b;
+            z-index: 1;
         }
         .search-container input:focus {
             box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.2);
@@ -196,7 +163,7 @@ foreach ($vouchers as $voucher) {
             justify-content: center;
             border-radius: 9999px;
             padding: 0.25rem 0.75rem;
-            font-weight: 600;
+            font-weight: 400;
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -223,7 +190,7 @@ foreach ($vouchers as $voucher) {
             color: white;
             border-radius: 9999px;
             font-size: 0.7rem;
-            font-weight: 700;
+            font-weight: 400;
             width: 18px;
             height: 18px;
             display: flex;
@@ -232,17 +199,17 @@ foreach ($vouchers as $voucher) {
         }
     </style>
 </head>
-<body class="bg-gray-900 flex min-h-screen">
-    <div class="bg-orb"></div>
+<body class="bg-gray-50 flex min-h-screen">
+    <!-- <div class="bg-orb"></div> -->
     <?php include __DIR__ . '/sidebar.php'; ?>
 
     <div class="flex-1 flex flex-col">
-        <header class="bg-slate-800/80 backdrop-blur border-b border-white/10 sticky top-0 z-40 p-5 flex items-center justify-between text-white shadow-lg">
-            <h1 class="text-2xl font-semibold">Executive Director Dashboard</h1>
+        <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-6 flex items-center justify-between text-gray-800 shadow-sm">
+            <h1 class="text-3xl font-semibold">Chief Executive Officer Dashboard</h1>
             <div class="flex items-center gap-4">
                 <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Search requests or vouchers..." class="bg-slate-700/50 border border-slate-600 rounded-lg py-2 px-4 text-white placeholder-slate-400 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <input type="text" id="searchInput" placeholder="Search requests or vouchers..." class="bg-white border border-gray-300 rounded-lg py-2 px-4 text-gray-900 placeholder-gray-500 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
@@ -251,7 +218,7 @@ foreach ($vouchers as $voucher) {
 
         <main class="flex-1 p-8">
             <div class="relative">
-                <div aria-hidden="true" class="orb-bg" style="background:radial-gradient(closest-side,#0b5ed7,transparent 70%),radial-gradient(closest-side,#d4af37,transparent 70%) 70% 10%/40% 40% no-repeat,radial-gradient(closest-side,#16a34a,transparent 70%) 30% 90%/35% 35% no-repeat;"></div>
+                <!-- Orb removed -->
             </div>
             
             <!-- Stats Cards -->
@@ -324,6 +291,12 @@ foreach ($vouchers as $voucher) {
                 
                 <!-- Requests Tab Content -->
                 <div id="requests-tab" class="p-6">
+                    <div class="status-filter">
+                        <button type="button" class="ed-req-filter active" data-filter="all">All <span class="status-count"><?= count($requests) ?></span></button>
+                        <button type="button" class="ed-req-filter" data-filter="pending">Pending <span class="status-count"><?= $pending_count ?></span></button>
+                        <button type="button" class="ed-req-filter" data-filter="approved">Approved <span class="status-count"><?= $approved_count ?></span></button>
+                        <button type="button" class="ed-req-filter" data-filter="rejected">Rejected <span class="status-count"><?= $rejected_count ?></span></button>
+                    </div>
                     <div class="grid grid-cols-1 gap-6">
                         <?php if (empty($requests)): ?>
                             <div class="text-center py-8">
@@ -333,7 +306,7 @@ foreach ($vouchers as $voucher) {
                                 <div class="text-gray-500">No requests found.</div>
                             </div>
                         <?php else: foreach ($requests as $request): ?>
-                            <div class="request-card bg-gray-50 rounded-lg shadow-md overflow-hidden border border-gray-200 request-item">
+                            <div class="request-card bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 request-item" data-status="<?= strtolower($request['status_name']) ?>">
                                 <div class="p-5">
                                     <div class="flex justify-between items-start">
                                         <div>
@@ -361,7 +334,7 @@ foreach ($vouchers as $voucher) {
                                     <p class="text-gray-700 mb-4 line-clamp-2"><?= e(substr($request['description'], 0, 150)) ?><?= strlen($request['description']) > 150 ? '...' : '' ?></p>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-500"><?= date('M d, Y', strtotime($request['created_at'])) ?></span>
-                                        <a href="index.php?action=view_request&id=<?= e($request['request_id']) ?>" class="btn btn-primary py-1.5 px-4 text-sm font-medium">View Details</a>
+                                        <a href="index.php?action=view_request&id=<?= e($request['request_id']) ?>" class="btn btn-primary btn-sm">View Details</a>
                                     </div>
                                 </div>
                             </div>
@@ -387,18 +360,18 @@ foreach ($vouchers as $voucher) {
                             
                             // Determine status class
                             $statusClass = '';
-                            if ($voucher['ed_status'] === 'pending') {
+                            if ($voucher['ed_status'] === 'pending') { // CEO status
                                 $statusClass = 'badge-pending';
-                            } elseif ($voucher['ed_status'] === 'approved') {
+                            } elseif ($voucher['ed_status'] === 'approved') { // CEO status
                                 $statusClass = 'badge-approved';
-                            } elseif ($voucher['ed_status'] === 'rejected') {
+                            } elseif ($voucher['ed_status'] === 'rejected') { // CEO status
                                 $statusClass = 'badge-rejected';
                             }
                             
                             // Check for unread messages
                             $has_unread = $voucherModel->has_unread_messages($voucher['id'], $user['user_id']);
                             ?>
-                            <div class="request-card bg-gray-50 rounded-lg shadow-md overflow-hidden border border-gray-200 voucher-item hover:shadow-lg transition-shadow duration-200">
+                            <div class="request-card bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 voucher-item hover:shadow-lg transition-shadow duration-200">
                                 <div class="p-5">
                                     <div class="flex justify-between items-start">
                                         <div>
@@ -427,14 +400,14 @@ foreach ($vouchers as $voucher) {
                                             <div class="flex flex-col items-end gap-1">
                                                 <span class="text-xs text-gray-500">Status:</span>
                                                 <span class="badge <?= $statusClass ?> flex items-center gap-1">
-                                                    <?php if ($voucher['ed_status'] === 'approved'): ?>
+                                                    <?php if ($voucher['ed_status'] === 'approved'): // CEO status ?>
                                                         <i class="fas fa-check-circle text-green-600"></i>
-                                                    <?php elseif ($voucher['ed_status'] === 'rejected'): ?>
+                                                    <?php elseif ($voucher['ed_status'] === 'rejected'): // CEO status ?>
                                                         <i class="fas fa-times-circle text-red-600"></i>
                                                     <?php else: ?>
                                                         <i class="fas fa-clock text-yellow-600"></i>
                                                     <?php endif; ?>
-                                                    <?= e($voucher['ed_status']) ?>
+                                                    <?= e($voucher['ed_status']) // CEO status ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -460,11 +433,11 @@ foreach ($vouchers as $voucher) {
                                             <?php endif; ?>
                                         </div>
                                         <div class="flex gap-2">
-                                            <a href="index.php?action=view_voucher&id=<?= e($voucher['id']) ?>" class="btn btn-primary py-1.5 px-4 text-sm font-medium flex items-center gap-1">
+                                            <a href="index.php?action=view_voucher&id=<?= e($voucher['id']) ?>" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-eye"></i> View Voucher
                                             </a>
                                             <?php if ($voucher['finance_status'] === 'approved' && $voucher['ed_status'] === 'approved'): ?>
-                                                <button onclick="window.open('index.php?action=view_voucher&id=<?= e($voucher['id']) ?>&print=true', '_blank')" class="btn btn-secondary py-1.5 px-4 text-sm font-medium flex items-center gap-1">
+                                                <button onclick="window.open('index.php?action=view_voucher&id=<?= e($voucher['id']) ?>&print=true', '_blank')" class="btn btn-secondary btn-sm">
                                                     <i class="fas fa-print"></i> Print
                                                 </button>
                                             <?php endif; ?>
@@ -535,6 +508,25 @@ foreach ($vouchers as $voucher) {
                 } else {
                     item.style.display = 'none';
                 }
+            });
+        });
+        
+        const edReqFilterBtns = document.querySelectorAll('.ed-req-filter');
+        const edReqItems = document.querySelectorAll('#requests-tab .request-item');
+        edReqFilterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                edReqFilterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const filter = btn.getAttribute('data-filter');
+                edReqItems.forEach(item => {
+                    const status = item.getAttribute('data-status');
+                    if (filter === 'all' || status === filter) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
             });
         });
     });

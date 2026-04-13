@@ -38,7 +38,7 @@ class VoucherModel {
             $data['amount_words'] ?? '',
             $data['prepared_by'],
             'pending', // Finance creates voucher, needs FM approval first
-            'pending', // Default ED status
+            'pending', // Default CEO status
         ]);
         
         if ($result) {
@@ -46,7 +46,7 @@ class VoucherModel {
             
             // Note: Finance creates vouchers with 'pending' status
             // Finance can approve their own vouchers immediately after creation
-            // Once approved by Finance, it goes to ED for final approval
+            // Once approved by Finance, it goes to CEO for final approval
             
             return $voucher_id;
         }
@@ -88,8 +88,8 @@ class VoucherModel {
                 $sql .= "AND v.prepared_by = ?";
                 $params[] = $user_id;
                 break;
-            case 4: // ED
-                // ED sees all vouchers, prioritizing pending ones
+            case 4: // CEO
+                // CEO sees all vouchers, prioritizing pending ones
                 $sql .= " ORDER BY v.ed_status = 'pending' DESC, v.finance_status = 'approved' DESC, v.created_at DESC";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute($params);
@@ -138,10 +138,10 @@ class VoucherModel {
     }
 
     /**
-     * Update voucher status by ED
+     * Update voucher status by CEO
      * 
-     * ED can approve or reject vouchers created by Finance
-     * If ED rejects, they can add a remark explaining why
+     * CEO can approve or reject vouchers created by Finance
+     * If CEO rejects, they can add a remark explaining why
      */
     public function update_ed_status($voucher_id, $status, $remark) {
         $sql = "UPDATE vouchers SET 
@@ -153,12 +153,12 @@ class VoucherModel {
             $stmt = $this->pdo->prepare($sql);
             $result = $stmt->execute([$status, $remark, $voucher_id]);
             
-            // If ED rejects, create a notification for Finance
+            // If CEO rejects, create a notification for Finance
             if ($result && $status == 'rejected' && !empty($remark)) {
                 // Get the voucher to find the Finance user who prepared it
                 $voucher = $this->get_voucher_by_id($voucher_id);
                 if ($voucher) {
-                    // Create a message from ED to Finance about the rejection
+                    // Create a message from CEO to Finance about the rejection
                     $ed_user_id = get_ed_user_id($this->pdo);
                     $this->add_voucher_message($voucher_id, $ed_user_id, $voucher['prepared_by'], "Voucher rejected: " . $remark);
                 }
@@ -166,7 +166,7 @@ class VoucherModel {
             
             return $result;
         } catch (PDOException $e) {
-            error_log("Error updating ED status: " . $e->getMessage());
+            error_log("Error updating CEO status: " . $e->getMessage());
             return false;
         }
     }
@@ -188,19 +188,19 @@ class VoucherModel {
             $stmt = $this->pdo->prepare($sql);
             $result = $stmt->execute([$status, $remark, $voucher_id]);
             
-            // If FM approves voucher, notify ED for final approval
+            // If FM approves voucher, notify CEO for final approval
             if ($result && $status == 'approved') {
                 // Get voucher details
                 $voucher = $this->get_voucher_by_id($voucher_id);
                 if ($voucher) {
-                    // Notify ED about the voucher that needs approval
+                    // Notify CEO about the voucher that needs approval
                     $ed_user_id = get_ed_user_id($this->pdo);
                     if ($ed_user_id) {
                         $title = ($voucher['voucher_type'] == 'petty_cash' ? 'Petty Cash' : 'Payment') . ' Voucher Ready for Final Approval';
                         $message = 'Voucher (PV No: ' . $voucher['pv_no'] . ') has been approved by Finance and is now ready for your final approval.';
                         create_voucher_notification($this->pdo, $ed_user_id, $title, $message, $voucher_id);
                         
-                        // Add a message from Finance to ED
+                        // Add a message from Finance to CEO
                         $this->add_voucher_message(
                             $voucher_id,
                             $voucher['prepared_by'], // Use the original creator (Finance user)
@@ -211,7 +211,7 @@ class VoucherModel {
                 }
             }
             
-            // If finance rejects a voucher, automatically set ED status to pending
+            // If finance rejects a voucher, automatically set CEO status to pending
             if ($result && $status == 'rejected') {
                 $this->update_ed_status($voucher_id, 'pending', null);
             }
@@ -224,7 +224,7 @@ class VoucherModel {
     }
 
     /**
-     * Add a message between Finance and ED regarding a voucher
+     * Add a message between Finance and CEO regarding a voucher
      */
     public function add_voucher_message($voucher_id, $sender_id, $recipient_id, $message) {
         $sql = "INSERT INTO voucher_messages (voucher_id, sender_id, recipient_id, message) 
@@ -239,10 +239,10 @@ class VoucherModel {
     }
     
     /**
-     * Check if a user can communicate about vouchers (ED and Finance only)
+     * Check if a user can communicate about vouchers (CEO and Finance only)
      */
     public function can_communicate_about_voucher($user_role_id, $voucher_id) {
-        // Only ED (role_id = 4) and Finance (role_id = 5) can communicate about vouchers
+        // Only CEO (role_id = 4) and Finance (role_id = 5) can communicate about vouchers
         return in_array($user_role_id, [4, 5]);
     }
     
@@ -250,10 +250,10 @@ class VoucherModel {
      * Get valid recipient for voucher communication based on sender role
      */
     public function get_voucher_communication_recipient($sender_role_id) {
-        if ($sender_role_id == 4) { // ED
+        if ($sender_role_id == 4) { // CEO
             return get_finance_manager_id($this->pdo); // Send to Finance Manager
         } elseif ($sender_role_id == 5) { // Finance
-            return get_ed_user_id($this->pdo); // Send to ED
+            return get_ed_user_id($this->pdo); // Send to CEO
         }
         return null;
     }
@@ -317,7 +317,7 @@ class VoucherModel {
      */
     public function is_financial_request($request_type) {
         // Define which request types are considered financial
-        $financial_types = ['Imprest request', 'Reimbursement request', 'Salary advance', 'TCCIA retirement request'];
+        $financial_types = ['Imprest request', 'Reimbursement request', 'Salary advance', 'Retirement', 'TNCC retirement request'];
         
         return in_array($request_type, $financial_types);
     }

@@ -18,6 +18,7 @@ $user = $_SESSION['user'];
 
 // Handle delete message (allow deletion of both sent and received messages)
 if (isset($_POST['delete_message'])) {
+    require_csrf_post();
     $message_id = (int)$_POST['message_id'];
     try {
         // Allow user to delete messages they sent or received
@@ -37,6 +38,7 @@ if (isset($_POST['delete_message'])) {
 
 // Handle mark as read
 if (isset($_POST['mark_read'])) {
+    require_csrf_post();
     $message_id = (int)$_POST['message_id'];
     try {
         $stmt = $pdo->prepare("UPDATE user_messages SET is_read = 1 WHERE id = ? AND to_user_id = ?");
@@ -123,37 +125,33 @@ try {
     <style>
         body { font-family: 'Inter', sans-serif; }
         .bg-app {
-            background: radial-gradient(1000px 600px at -10% -10%, rgba(11,94,215,0.25), transparent 60%),
-                        radial-gradient(800px 500px at 110% 10%, rgba(212,175,55,0.20), transparent 60%),
-                        radial-gradient(900px 550px at 50% 120%, rgba(22,163,74,0.18), transparent 60%),
-                        linear-gradient(180deg, #0b1220 0%, #0a1020 100%);
+            background-color: #f8fafc;
         }
-        .orb { position:absolute; border-radius:9999px; filter: blur(40px); opacity:.4; pointer-events:none; }
-        .orb-blue { background:#0b5ed7; animation: floatY 9s ease-in-out infinite; }
-        .orb-gold { background:#d4af37; animation: floatX 11s ease-in-out infinite; }
-        .orb-green{ background:#16a34a; animation: floatXY 13s ease-in-out infinite; }
+        /* .orb { position:absolute; border-radius:9999px; filter: blur(40px); opacity:.4; pointer-events:none; } */
+        /* .orb-blue { background:#0b5ed7; animation: floatY 9s ease-in-out infinite; } */
+        /* .orb-gold { background:#d4af37; animation: floatX 11s ease-in-out infinite; } */
+        /* .orb-green{ background:#16a34a; animation: floatXY 13s ease-in-out infinite; } */
         @keyframes floatY { 0%{transform:translateY(0)} 50%{transform:translateY(-16px)} 100%{transform:translateY(0)} }
         @keyframes floatX { 0%{transform:translateX(0)} 50%{transform:translateX(18px)} 100%{transform:translateX(0)} }
         @keyframes floatXY { 0%{transform:translate(0,0)} 50%{transform:translate(-14px,12px)} 100%{transform:translate(0,0)} }
-        .glass { background: linear-gradient(180deg, rgba(11,20,40,.65), rgba(5,10,30,.55)); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.08); }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); border:1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .header-pulse { animation: headerPulse 6s ease-in-out infinite; }
-        @keyframes headerPulse { 0%,100% { box-shadow: 0 0 0 rgba(11,94,215,0); } 50% { box-shadow: 0 0 24px rgba(11,94,215,.25), 0 0 40px rgba(212,175,55,.15); } }
-        .btn-hero { background:linear-gradient(90deg,#0b5ed7,#d4af37); color:#fff; box-shadow:0 8px 24px rgba(11,94,215,.35); transition: transform .2s ease, box-shadow .2s ease, filter .2s ease; }
-        .btn-hero:hover { filter:brightness(1.07); transform: translateY(-2px); box-shadow:0 14px 28px rgba(11,94,215,.35); }
-        .title-gradient { background: linear-gradient(90deg,#0b5ed7,#d4af37,#16a34a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .divider { height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent); }
-        .message-card { background: linear-gradient(180deg, rgba(11,20,40,.4), rgba(5,10,30,.4)); border:1px solid rgba(255,255,255,.08); transition: all .3s ease; }
-        .message-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(11,94,215,.15); }
-        .message-unread { border-left: 4px solid #0b5ed7; background: linear-gradient(180deg, rgba(11,94,215,.1), rgba(11,94,215,.05)); }
+        @keyframes headerPulse { 0%,100% { box-shadow: 0 0 0 rgba(11,94,215,0); } 50% { box-shadow: 0 0 24px rgba(11,94,215,.15), 0 0 40px rgba(212,175,55,.1); } }
+        /* Removed non-standard .btn-hero styles */
+        .title-gradient { color:#1f2937; }
+        .divider { height:1px; background:linear-gradient(90deg, transparent, rgba(0,0,0,.12), transparent); }
+        .message-card { background: #ffffff; border:1px solid #e2e8f0; transition: all .3s ease; }
+        .message-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(11,94,215,.1); }
+        .message-unread { border-left: 4px solid #0b5ed7; background: #f0f9ff; }
         .marquee { white-space: nowrap; overflow: hidden; }
         .marquee > span { display:inline-block; padding-left:100%; animation: marquee 30s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%);} 100% { transform: translateX(-100%);} }
     </style>
 </head>
 <body class="bg-app flex min-h-screen relative">
-    <div class="orb orb-blue" style="top:-60px; left:-40px; width:220px; height:220px;"></div>
+    <!-- <div class="orb orb-blue" style="top:-60px; left:-40px; width:220px; height:220px;"></div>
     <div class="orb orb-gold" style="top:20%; right:-80px; width:260px; height:260px;"></div>
-    <div class="orb orb-green" style="bottom:-80px; left:20%; width:240px; height:240px;"></div>
+    <div class="orb orb-green" style="bottom:-80px; left:20%; width:240px; height:240px;"></div> -->
     
     <!-- Sidebar -->
     <?php include __DIR__ . '/sidebar.php'; ?>
@@ -165,20 +163,20 @@ try {
             <h1 class="text-2xl font-bold title-gradient">Messages</h1>
             <div class="flex items-center space-x-4">
                 <p>
-                    Welcome, <span class="font-semibold text-slate-100"><?= htmlspecialchars($user['fullname']) ?></span>
+                    Welcome, <span class="font-semibold text-gray-800"><?= htmlspecialchars($user['fullname']) ?></span>
                 </p>
                 <?php if ($unread_count > 0): ?>
-                <span class="px-3 py-1 rounded-full text-sm bg-red-500/20 text-red-300 border border-red-500/30 font-bold">
+                <span class="px-3 py-1 rounded-full text-sm bg-red-100 text-red-800 border border-red-200 font-bold">
                     <?= $unread_count ?> Unread
                 </span>
                 <?php endif; ?>
-                <a href="index.php?action=dashboard" class="bg-slate-900/40 text-slate-100 border border-white/10 font-medium py-2 px-4 rounded-lg shadow-sm hover:bg-slate-900/60">
+                <a href="index.php?action=dashboard" class="btn btn-secondary">
                     ← Back to Dashboard
                 </a>
             </div>
         </header>
         <div class="glass px-4 py-2">
-            <div class="marquee text-slate-100 text-sm">
+            <div class="marquee text-gray-700 text-sm">
                 <span>Messages — Your personal communication center 📧 Stay connected with your team 💙💛💚 • </span>
             </div>
         </div>
@@ -190,21 +188,21 @@ try {
                     $flash = $_SESSION['flash'];
                     unset($_SESSION['flash']);
                 ?>
-                <div class="mb-6 p-4 rounded-lg <?= $flash['type'] === 'success' ? 'bg-green-500/20 text-green-100 border border-green-500/30' : 'bg-red-500/20 text-red-100 border border-red-500/30' ?>">
+                <div class="mb-6 p-4 rounded-lg <?= $flash['type'] === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200' ?>">
                     <?= htmlspecialchars($flash['message']) ?>
                 </div>
                 <?php endif; ?>
                 
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-2xl font-bold title-gradient">Your Messages 📧</h2>
-                    <div class="text-slate-300">
+                    <div class="text-gray-600">
                         Total: <?= count($messages) ?> | Unread: <?= $unread_count ?>
                     </div>
                 </div>
                 
                 <!-- Debug Info -->
-                <div class="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                    <p class="text-blue-300 text-sm">
+                <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-blue-800 text-sm">
                         <strong>Debug:</strong> Found <?= count($messages) ?> messages for user ID <?= $user['user_id'] ?>.
                         <?php if (empty($messages)): ?>
                         <br>This could mean: 1) No messages sent/received yet, 2) Database table issue, 3) Message sending not working.
@@ -219,28 +217,28 @@ try {
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="font-bold text-lg text-slate-100"><?= htmlspecialchars($message['subject']) ?></h3>
+                                    <h3 class="font-bold text-lg text-gray-900"><?= htmlspecialchars($message['subject']) ?></h3>
                                     <?php if (!$message['is_read']): ?>
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">NEW</span>
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">NEW</span>
                                     <?php endif; ?>
                                 </div>
-                                <div class="text-sm text-slate-400 mb-3">
+                                <div class="text-sm text-gray-500 mb-3">
                                     <?php if ($message['message_type'] === 'sent'): ?>
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 mr-2">SENT</span>
-                                        To: <span class="font-medium text-slate-300"><?= htmlspecialchars($message['receiver_name'] ?? 'Unknown') ?></span> • 
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">SENT</span>
+                                        To: <span class="font-medium text-gray-700"><?= htmlspecialchars($message['receiver_name'] ?? 'Unknown') ?></span> • 
                                     <?php else: ?>
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 mr-2">RECEIVED</span>
-                                        From: <span class="font-medium text-slate-300"><?= htmlspecialchars($message['sender_name'] ?? 'System') ?></span> • 
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">RECEIVED</span>
+                                        From: <span class="font-medium text-gray-700"><?= htmlspecialchars($message['sender_name'] ?? 'System') ?></span> • 
                                     <?php endif; ?>
                                     <?= date('M j, Y g:i A', strtotime($message['created_at'])) ?>
                                 </div>
-                                <div class="text-slate-200 leading-relaxed">
+                                <div class="text-gray-700 leading-relaxed">
                                     <?= nl2br(htmlspecialchars($message['message'])) ?>
                                 </div>
                                 <?php if ($message['message_type'] === 'received' && isset($message['is_private']) && $message['is_private']): ?>
-                                <div class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                    <p class="text-yellow-300 text-sm">
-                                        <strong>📧 Private Message from Executive Director</strong><br>
+                                <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <p class="text-yellow-800 text-sm">
+                                        <strong>📧 Private Message from Chief Executive Officer</strong><br>
                                         This message is confidential and intended only for you. Other users cannot see or reply to this message.
                                     </p>
                                 </div>
@@ -249,17 +247,19 @@ try {
                             <div class="flex gap-2 ml-4">
                                 <?php if (!$message['is_read'] && $message['message_type'] === 'received'): ?>
                                 <form method="POST" style="display: inline;">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="message_id" value="<?= $message['id'] ?>">
-                                    <button type="submit" name="mark_read" class="bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium py-1 px-3 rounded text-sm hover:bg-blue-500/30">
+                                    <button type="submit" name="mark_read" class="btn btn-primary btn-sm">
                                         ✓ Mark Read
                                     </button>
                                 </form>
                                 <?php endif; ?>
                                 <form method="POST" style="display: inline;">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="message_id" value="<?= $message['id'] ?>">
                                     <button type="submit" name="delete_message" 
                                             onclick="return confirm('Are you sure you want to delete this <?= $message['message_type'] === 'sent' ? 'sent' : 'received' ?> message?')"
-                                            class="bg-red-500/20 text-red-300 border border-red-500/30 font-medium py-1 px-3 rounded text-sm hover:bg-red-500/30">
+                                            class="btn btn-danger btn-sm">
                                         🗑️ Delete
                                     </button>
                                 </form>
@@ -269,7 +269,7 @@ try {
                     <?php endforeach; ?>
                 </div>
                 <?php else: ?>
-                <div class="text-center text-slate-400 py-20">
+                <div class="text-center text-gray-500 py-20">
                     <div class="text-6xl mb-4">📧</div>
                     <p class="text-xl mb-2">No messages yet</p>
                     <p class="text-sm">Messages from administrators and system notifications will appear here.</p>

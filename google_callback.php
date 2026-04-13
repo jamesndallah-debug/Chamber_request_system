@@ -65,6 +65,14 @@ try {
             $updateStmt = $pdo->prepare('UPDATE users SET google_id = ? WHERE user_id = ?');
             $updateStmt->execute([$google_id, $user['user_id']]);
         }
+        // Block deactivated or deleted users
+        if ((isset($user['active']) && (int)$user['active'] === 0) || (!empty($user['deleted_at']))) {
+            echo '<script>alert("Your account has been deactivated. Please contact the administrator."); window.close();</script>';
+            exit;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_regenerate_id(true);
+        }
         $_SESSION['user'] = $user;
     } else {
         // Create new user
@@ -75,6 +83,9 @@ try {
             $newId = (int)$pdo->lastInsertId();
             $fetch = $pdo->prepare('SELECT * FROM users WHERE user_id = ?');
             $fetch->execute([$newId]);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                @session_regenerate_id(true);
+            }
             $_SESSION['user'] = $fetch->fetch(PDO::FETCH_ASSOC);
         }
     }

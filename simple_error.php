@@ -22,7 +22,7 @@
         }
         .error-code {
             font-size: 72px;
-            font-weight: bold;
+            font-weight: normal;
             color: #e74c3c;
             margin-bottom: 20px;
         }

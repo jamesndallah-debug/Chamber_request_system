@@ -48,32 +48,32 @@ class RequestModel {
         $params = [];
 
         // Visibility rules by role and type
-        // - Salary advance: visible ONLY to HRM (2), Finance (5), ED (4)
-        // - TCCIA retirement request: visible ONLY to Finance (5), ED (4)
+        // - Salary advance: visible ONLY to HRM (2), Finance (5), CEO (4)
+        // - Retirement (formerly TNCC retirement request): visible ONLY to Finance (5), CEO (4)
         switch ((int)$role_id) {
             case 1: // Employee - only their own
                 $sql .= " AND r.user_id = ?";
                 $params[] = $user_data['user_id'];
                 break;
-            case 3: // HOD - department, but exclude Salary advance and TCCIA retirement
-                $sql .= " AND u.department = ? AND r.request_type NOT IN ('Salary advance','TCCIA retirement request')";
+            case 3: // HOD - department, but exclude Salary advance and Retirement
+                $sql .= " AND u.department = ? AND r.request_type NOT IN ('Salary advance','Retirement','TNCC retirement request')";
                 $params[] = $user_data['department'];
                 break;
-            case 2: // HRM - passed HOD, exclude TCCIA retirement
-                $sql .= " AND r.hod_status = 'approved' AND r.request_type <> 'TCCIA retirement request'";
+            case 2: // HRM - passed HOD, exclude Retirement
+                $sql .= " AND r.hod_status = 'approved' AND r.request_type NOT IN ('Retirement','TNCC retirement request')";
                 break;
-            case 6: // Internal Auditor - passed HRM, exclude Salary advance and TCCIA retirement
-                $sql .= " AND r.hrm_status = 'approved' AND r.request_type NOT IN ('Salary advance','TCCIA retirement request')";
+            case 6: // Internal Auditor - passed HRM, exclude Salary advance and Retirement
+                $sql .= " AND r.hrm_status = 'approved' AND r.request_type NOT IN ('Salary advance','Retirement','TNCC retirement request')";
                 break;
-            case 5: // Finance - passed Auditor OR special cases (Salary advance/TCCIA) per initial routing
+            case 5: // Finance - passed Auditor OR special cases (Salary advance/Retirement) per initial routing
                 // For finance, show items where finance is pending or later, regardless of request type visibility
                 // but still ensure they only get items that reached finance by workflow
                 $sql .= " AND (
-                            r.request_type IN ('Salary advance','TCCIA retirement request')
+                            r.request_type IN ('Salary advance','Retirement','TNCC retirement request')
                             OR r.auditor_status = 'approved'
                          )";
                 break;
-            case 4: // ED - show items that reached ED (finance approved)
+            case 4: // CEO - show items that reached CEO (finance approved)
                 $sql .= " AND r.finance_status = 'approved'";
                 break;
             case 7: // Admin - see all
@@ -149,9 +149,9 @@ class RequestModel {
                 $date_field = 'finance_approved_at';
                 break;
             case 4:
-                $status_field = 'ed_status';
-                $remark_field = 'ed_remark';
-                $date_field = 'ed_approved_at';
+                $status_field = 'ed_status'; // CEO status field
+                $remark_field = 'ed_remark'; // CEO remark field
+                $date_field = 'ed_approved_at'; // CEO approval date field
                 break;
             default:
                 return false;
@@ -171,7 +171,7 @@ class RequestModel {
                 $stmt_main_status = $this->pdo->prepare($sql_main_status);
                 $stmt_main_status->execute([3, $request_id]);
             }
-            // If the last approver (ED) approves, update status and deduct Annual leave if applicable.
+            // If the last approver (CEO) approves, update status and deduct Annual leave if applicable.
             elseif ($user_role_id == 4 && $status === 'approved') {
                 $sql_main_status = "UPDATE requests SET status_id = ? WHERE request_id = ?";
                 $stmt_main_status = $this->pdo->prepare($sql_main_status);
@@ -212,7 +212,7 @@ class RequestModel {
                                 $stmtBal = $this->pdo->prepare("SELECT balance_days FROM leave_balances WHERE user_id = ? AND leave_type = 'Annual leave' AND year = ?");
                                 $stmtBal->execute([$uid, $year]);
                                 $after = (int)$stmtBal->fetchColumn();
-                                $log = $this->pdo->prepare("INSERT INTO leave_balance_logs (user_id, leave_type, year, change_days, balance_after, reason, request_id) VALUES (?, 'Annual leave', ?, ?, ?, 'ED approval deduction', ?)");
+                                $log = $this->pdo->prepare("INSERT INTO leave_balance_logs (user_id, leave_type, year, change_days, balance_after, reason, request_id) VALUES (?, 'Annual leave', ?, ?, ?, 'CEO approval deduction', ?)");
                                 $log->execute([$uid, $year, -$daysApplied, $after, $request_id]);
                             } catch (PDOException $e) {
                                 error_log('Failed to log leave deduction: ' . $e->getMessage());
@@ -250,7 +250,7 @@ class RequestModel {
                 2 => 'HRM',
                 6 => 'Internal Auditor',
                 5 => 'Finance',
-                4 => 'ED'
+                4 => 'CEO'
             ];
             
             $roleName = $roleNames[$user_role_id] ?? 'Manager';

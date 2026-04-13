@@ -33,22 +33,19 @@ try {
     <link rel="stylesheet" href="assets/ui.css">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        @keyframes floatOrb { 0%{transform:translateY(0)} 50%{transform:translateY(-12px)} 100%{transform:translateY(0)} }
-        .orb-bg { position:absolute; inset:-40px; filter:blur(70px); opacity:.25; pointer-events:none; }
-        .btn-gradient { background:linear-gradient(90deg,#0b5ed7,#d4af37); color:#fff; }
-        .glass { background: linear-gradient(180deg, rgba(11,20,40,.65), rgba(5,10,30,.55)); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.08); }
-        .btn-gradient:hover { filter:brightness(1.05); }
-        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:rgba(13, 25, 45, .3); border:1px solid rgba(11,94,215,.35); color:#e2e8f0; font-weight:600; }
+        /* Removed non-standard .btn-gradient styles */
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); border:1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#f1f5f9; border:1px solid #e2e8f0; color:#475569; }
     </style>
 </head>
-<body class="bg-gray-100 flex min-h-screen">
+<body class="bg-gray-50 flex min-h-screen">
     <!-- Sidebar -->
     <?php include __DIR__ . '/sidebar.php'; ?>
     
     <!-- Main Content -->
     <div class="flex-1 flex flex-col">
         <!-- Top Nav -->
-        <header class="glass shadow p-4 flex items-center justify-between sticky top-0 z-40">
+        <header class="bg-white/80 backdrop-blur border-b border-gray-200 shadow-sm p-4 flex items-center justify-between sticky top-0 z-40 text-gray-800">
             <h1 class="text-xl font-semibold">New Request</h1>
             <div class="flex items-center space-x-4">
                 <p>
@@ -59,55 +56,53 @@ try {
 
         <!-- Main Content Area -->
         <main class="flex-1 p-6">
-            <div class="relative">
-                <div aria-hidden="true" class="orb-bg" style="background:radial-gradient(closest-side,#0b5ed7,transparent 70%),radial-gradient(closest-side,#d4af37,transparent 70%) 70% 10%/40% 40% no-repeat,radial-gradient(closest-side,#0b5ed7,transparent 70%) 30% 90%/35% 35% no-repeat; animation:floatOrb 16s ease-in-out infinite;"></div>
-            </div>
-            <div class="glass p-6 rounded-2xl shadow-lg max-w-4xl mx-auto" style="color:#e2e8f0;">
+            <div class="glass p-6 rounded-2xl shadow-lg max-w-4xl mx-auto" style="color:#1e293b;">
                 <div class="flex items-center justify-between mb-2">
-                    <h2 class="text-2xl font-bold">Submit a New Request <span id="type_chip" class="chip" style="display:none;"><span id="type_emoji">📝</span><span id="type_label"></span></span></h2>
-                    <div class="text-sm text-slate-400 font-semibold tracking-wider">🏢 TCCIA ✨</div>
+                    <h2 class="text-2xl font-bold text-gray-900">Submit a New Request <span id="type_chip" class="chip" style="display:none;"><span id="type_emoji">📝</span><span id="type_label"></span></span></h2>
+                    <div class="text-sm text-gray-500 font-semibold tracking-wider">🏢 TNCC ✨</div>
                 </div>
-                <p class="text-sm text-slate-300 mb-6">To be efficient, sustainable and most preferred role model business member based organization in Tanzania and Africa.</p>
+                <p class="text-sm text-gray-600 mb-6">To be efficient, sustainable and most preferred role model business member based organization in Tanzania and Africa.</p>
 
                 <?php if ($error): ?>
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                         <span class="block sm:inline"><?= e($error) ?></span>
                     </div>
                 <?php endif; ?>
 
                 <form action="index.php?action=new_request" method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <?= csrf_field() ?>
                     <div>
-                        <label for="request_type" class="block text-slate-200 font-medium mb-2">Request Type <span class="text-sm text-slate-400">(pick one)</span></label>
-                        <select id="request_type" name="request_type" class="w-full px-4 py-3 border-2 rounded-lg bg-white border-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-lg" required style="font-size: 16px; line-height: 1.5; background-color: #ffffff !important; border-color: #ffffff !important;">
+                        <label for="request_type" class="block text-gray-800 font-medium mb-2">Request Type <span class="text-sm text-gray-500">(pick one)</span></label>
+                        <select id="request_type" name="request_type" class="w-full px-4 py-3 border rounded-lg bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" required style="font-size: 16px; line-height: 1.5;">
                             <option value="" style="color: #6b7280; font-style: italic;">-- Select Request Type --</option>
-                            <optgroup label="💼 Financial Requests" style="font-weight: bold; color: #1f2937; background-color: #f3f4f6; padding: 8px;">
-                                <option value="Impest request" style="color: #000000; font-weight: 600; padding: 8px 12px;">💰 Impest request</option>
-                                <option value="TCCIA retirement request" style="color: #000000; font-weight: 600; padding: 8px 12px;">📑 TCCIA retirement request</option>
-                                <option value="Salary advance" style="color: #000000; font-weight: 600; padding: 8px 12px;">💵 Salary advance</option>
-                                <option value="Reimbursement request" style="color: #000000; font-weight: 600; padding: 8px 12px;">↩️ Reimbursement request</option>
-                                <option value="Travel form" style="color: #000000; font-weight: 600; padding: 8px 12px;">✈️ Travel form</option>
+                            <optgroup label="💼 Financial Requests" style="font-weight: normal; color: #1f2937; background-color: #f3f4f6; padding: 8px;">
+                                <option value="Imprest request" style="color: #000000; padding: 8px 12px;">💰 Imprest request</option>
+                                <option value="Retirement" style="color: #000000; padding: 8px 12px;">📑 Retirement</option>
+                                <option value="Salary advance" style="color: #000000; padding: 8px 12px;">💵 Salary advance</option>
+                                <option value="Reimbursement request" style="color: #000000; padding: 8px 12px;">↩️ Reimbursement request</option>
+                                <option value="Travel form" style="color: #000000; padding: 8px 12px;">✈️ Travel form</option>
                             </optgroup>
-                            <optgroup label="👥 HRM Requests" style="font-weight: bold; color: #1f2937; background-color: #f3f4f6; padding: 8px;">
-                                <option value="Annual leave" style="color: #1e3a8a; font-weight: 600; padding: 8px 12px;">🏖️ Annual leave</option>
-                                <option value="Compassionate leave" style="color: #1e3a8a; font-weight: 600; padding: 8px 12px;">🤝 Compassionate leave</option>
-                                <option value="Paternity leave" style="color: #1e3a8a; font-weight: 600; padding: 8px 12px;">👶 Paternity leave</option>
-                                <option value="Maternity leave" style="color: #1e3a8a; font-weight: 600; padding: 8px 12px;">🤱 Maternity leave</option>
-                                <option value="Sick leave" style="color: #1e3a8a; font-weight: 600; padding: 8px 12px;">🤒 Sick leave</option>
-                                <option value="Staff clearance form" style="color: #1e3a8a; font-weight: 600; padding: 8px 12px;">📋 Staff clearance form</option>
+                            <optgroup label="👥 HRM Requests" style="font-weight: normal; color: #1f2937; background-color: #f3f4f6; padding: 8px;">
+                                <option value="Annual leave" style="color: #1e3a8a; padding: 8px 12px;">🏖️ Annual leave</option>
+                                <option value="Compassionate leave" style="color: #1e3a8a; padding: 8px 12px;">🤝 Compassionate leave</option>
+                                <option value="Paternity leave" style="color: #1e3a8a; padding: 8px 12px;">👶 Paternity leave</option>
+                                <option value="Maternity leave" style="color: #1e3a8a; padding: 8px 12px;">🤱 Maternity leave</option>
+                                <option value="Sick leave" style="color: #1e3a8a; padding: 8px 12px;">🤒 Sick leave</option>
+                                <option value="Staff clearance form" style="color: #1e3a8a; padding: 8px 12px;">📋 Staff clearance form</option>
                             </optgroup>
                         </select>
-                        <p class="text-xs text-slate-400 mt-1" id="type_hint">Amount will be required for financial requests only.</p>
+                        <p class="text-xs text-gray-500 mt-1" id="type_hint">Amount will be required for financial requests only.</p>
                     </div>
                     <!-- Dynamic fields container -->
-                    <div id="dynamic_fields" class="space-y-4 p-4 rounded-lg border border-slate-700 bg-slate-900/40"></div>
+                    <div id="dynamic_fields" class="space-y-4 p-4 rounded-lg border border-gray-200 bg-gray-50"></div>
                     </div>
                     <div id="amount_group" class="max-w-lg mx-auto">
-                        <label for="amount" class="block text-slate-200 font-medium mb-2">Amount</label>
-                        <input type="number" id="amount" name="amount" step="0.01" class="w-full px-4 py-2 border rounded-lg bg-slate-800 border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label for="amount" class="block text-gray-700 font-medium mb-2">Amount</label>
+                        <input type="number" id="amount" name="amount" step="0.01" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div class="max-w-lg mx-auto">
-                        <label for="attachment" class="block text-slate-200 font-medium mb-2">Attachment (PDF, JPG, PNG)</label>
-                        <input type="file" id="attachment" name="attachment" class="w-full px-4 py-2 border rounded-lg bg-slate-800 border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label for="attachment" class="block text-gray-700 font-medium mb-2">Attachment (PDF, JPG, PNG)</label>
+                        <input type="file" id="attachment" name="attachment" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <!-- Hidden fields for title and description -->
                     <input type="hidden" id="title" name="title" value="">
@@ -116,8 +111,8 @@ try {
                     <input type="hidden" id="annual_available" value="<?= e($annualAvailableDays) ?>">
                     <input type="hidden" id="details_json" name="details_json" value="{}">
                     <div class="flex items-center gap-3 justify-end">
-                        <button type="submit" class="btn-gradient font-bold py-3 px-6 rounded-lg transition">Submit Request</button>
-                        <button type="button" onclick="window.print()" class="bg-slate-800 border border-slate-700 text-slate-200 px-6 py-3 rounded-lg shadow-sm hover:bg-slate-700">🖨️ Print</button>
+                        <button type="submit" class="btn btn-primary font-bold py-3 px-6 rounded-lg transition">Submit Request</button>
+                        <button type="button" onclick="window.print()" class="btn btn-secondary px-6 py-3 rounded-lg shadow-sm">🖨️ Print</button>
                     </div>
                 </form>
             </div>
@@ -138,15 +133,17 @@ try {
         const annualAvailableInput = document.getElementById('annual_available');
         const annualAvailable = annualAvailableInput ? parseInt(annualAvailableInput.value || '0', 10) : 0;
         const financial = new Set([
-            'Impest request','TCCIA retirement request','Salary advance','Reimbursement request','Travel form'
+            'Imprest request','Retirement','TNCC retirement request','Salary advance','Reimbursement request','Travel form'
         ]);
         const leaveTypes = new Set([
             'Annual leave','Compassionate leave','Paternity leave','Maternity leave','Sick leave'
         ]);
         const emojiMap = new Map([
+            ['Imprest request','💰'],
             ['Impest request','💰'],
             ['Reimbursement request','↩️'],
-            ['TCCIA retirement request','📑'],
+            ['Retirement','📑'],
+            ['TNCC retirement request','📑'],
             ['Salary advance','💵'],
             ['Travel form','✈️'],
             ['Annual leave','🏖️'],
@@ -159,11 +156,13 @@ try {
         function group(title, inner){
             return `<div class=\"bg-gray-50 border rounded p-3\"><div class=\"font-medium mb-2\">${title}</div>${inner}</div>`;
         }
+        const todayStr = new Date().toISOString().slice(0,10);
         function h(label, id, type='text', attrs=''){
-            return `<div><label class=\"block text-white font-medium mb-2\" for=\"${id}\">${label}</label><input ${attrs} id=\"${id}\" name=\"${id}\" type=\"${type}\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\" style=\"color: #000000 !important; background-color: #ffffff !important;\"></div>`;
+            const extra = (type === 'date') ? ` min=\"${todayStr}\"` : '';
+            return `<div><label class=\"block text-gray-700 font-medium mb-2\" for=\"${id}\">${label}</label><input ${attrs}${extra} id=\"${id}\" name=\"${id}\" type=\"${type}\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\"></div>`;
         }
         function ta(label, id, attrs=''){
-            return `<div><label class=\"block text-white font-medium mb-2\" for=\"${id}\">${label}</label><textarea ${attrs} id=\"${id}\" name=\"${id}\" rows=\"3\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\" style=\"color: #000000 !important; background-color: #ffffff !important;\"></textarea></div>`;
+            return `<div><label class=\"block text-gray-700 font-medium mb-2\" for=\"${id}\">${label}</label><textarea ${attrs} id=\"${id}\" name=\"${id}\" rows=\"3\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\"></textarea></div>`;
         }
         function renderFields(v){
             dynamic.innerHTML = '';
@@ -176,7 +175,7 @@ try {
                 if (v !== 'Sick leave') {
                     if (v === 'Annual leave') {
                         // Show available and remaining info for Annual leave
-                        dynamic.insertAdjacentHTML('beforeend', `<div id="annual_info" class="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-slate-200">
+                        dynamic.insertAdjacentHTML('beforeend', `<div id="annual_info" class="rounded-lg border border-gray-200 bg-white p-3 text-gray-700">
                             <div class="flex items-center justify-between">
                                 <span>Available: <span id="annual_available_days" class="font-semibold">${annualAvailable}</span> days</span>
                                 <span>Remaining: <span id="annual_remaining_days" class="font-semibold">${annualAvailable}</span> days</span>
@@ -218,30 +217,30 @@ try {
                     }
                 }
             } else if (v === 'Staff clearance form') {
-                dynamic.insertAdjacentHTML('beforeend', `<div><label class="block text-white font-medium mb-2" for="clear_name">Name</label><input required id="clear_name" name="clear_name" type="text" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" style="color: #000000 !important; background-color: #ffffff !important;"></div>`);
-                dynamic.insertAdjacentHTML('beforeend', `<div><label class="block text-white font-medium mb-2" for="last_day">Last Day of Work</label><input required id="last_day" name="last_day" type="date" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" style="color: #000000 !important; background-color: #ffffff !important;"></div>`);
-                dynamic.insertAdjacentHTML('beforeend', `<div><label class="block text-white font-medium mb-2" for="clear_department">Department</label><input required id="clear_department" name="clear_department" type="text" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" style="color: #000000 !important; background-color: #ffffff !important;"></div>`);
+                dynamic.insertAdjacentHTML('beforeend', `<div><label class="block text-gray-700 font-medium mb-2" for="clear_name">Name</label><input required id="clear_name" name="clear_name" type="text" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>`);
+                dynamic.insertAdjacentHTML('beforeend', h('Last Day of Work', 'last_day', 'date', 'required'));
+                dynamic.insertAdjacentHTML('beforeend', `<div><label class="block text-gray-700 font-medium mb-2" for="clear_department">Department</label><input required id="clear_department" name="clear_department" type="text" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>`);
                 // Clearance areas with black text for field labels
                 function hClearance(label, id, type='text', attrs=''){
-                    return `<div><label class=\"block text-black font-medium mb-2\" for=\"${id}\">${label}</label><input ${attrs} id=\"${id}\" name=\"${id}\" type=\"${type}\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\" style=\"color: #000000 !important; background-color: #ffffff !important;\"></div>`;
+                    return `<div><label class=\"block text-gray-700 font-medium mb-2\" for=\"${id}\">${label}</label><input ${attrs} id=\"${id}\" name=\"${id}\" type=\"${type}\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\"></div>`;
                 }
                 function taClearance(label, id, attrs=''){
-                    return `<div><label class=\"block text-black font-medium mb-2\" for=\"${id}\">${label}</label><textarea ${attrs} id=\"${id}\" name=\"${id}\" rows=\"3\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\" style=\"color: #000000 !important; background-color: #ffffff !important;\"></textarea></div>`;
+                    return `<div><label class=\"block text-gray-700 font-medium mb-2\" for=\"${id}\">${label}</label><textarea ${attrs} id=\"${id}\" name=\"${id}\" rows=\"3\" class=\"w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500\"></textarea></div>`;
                 }
                 
-                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">📁 Own Department Clearance</label>
+                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">📁 Own Department Clearance</label>
                     ${taClearance('Manuals / Work / Files / Keys / Car', 'dept_items')}</div>`);
-                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">💻 IT Clearance</label>
+                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-green-50 border border-green-100 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">💻 IT Clearance</label>
                     ${hClearance('Mobile Phone', 'it_mobile')}
                     ${hClearance('Laptop', 'it_laptop')}
                     ${hClearance('Other IT Equipment', 'it_other')}</div>`);
-                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">💰 Finance Clearance</label>
+                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">💰 Finance Clearance</label>
                     ${hClearance('Outstanding Floats', 'fin_floats')}
                     ${hClearance('Salary Advances', 'fin_advances')}
                     ${hClearance('Staff Loans', 'fin_loans')}
                     ${hClearance('Imprest Retirements', 'fin_imprest')}
                     ${hClearance('Personal Bills Settlement', 'fin_bills')}</div>`);
-                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">👥 HR Clearance</label>
+                dynamic.insertAdjacentHTML('beforeend', `<div class="bg-purple-50 border border-purple-100 rounded-lg p-4 mb-4"><label class=\"block text-gray-900 font-bold text-lg mb-3\">👥 HR Clearance</label>
                     ${hClearance('Exit Interview Completion', 'hr_exit_interview')}
                     ${hClearance('Company Mobile Phones', 'hr_mobile_phones')}
                     ${hClearance('Earphones/Headsets', 'hr_earphones')}
@@ -250,7 +249,7 @@ try {
                     ${hClearance('NHIF Cards', 'hr_nhif_cards')}</div>`);
             } else {
                 // Financial forms
-                const finImprestLike = new Set(['Impest request','Reimbursement request']);
+                const finImprestLike = new Set(['Imprest request','Impest request','Reimbursement request']);
                 if (finImprestLike.has(v)) {
                     let inner = '';
                     inner += h('Name', 'fin_name', 'text', 'required');
@@ -260,7 +259,7 @@ try {
                     inner += h('I request an imprest of TShs', 'imprest_amount', 'number', 'min=0 step=0.01 required');
                     inner += ta('Description', 'fin_description', 'required');
                     dynamic.insertAdjacentHTML('beforeend', group(v + ' Details', inner));
-                } else if (v === 'TCCIA retirement request') {
+                } else if (v === 'Retirement' || v === 'TNCC retirement request') {
                     let inner = '';
                     inner += h('Name', 'fin_name', 'text', 'required');
                     inner += h('Position', 'fin_position', 'text', 'required');
@@ -272,6 +271,9 @@ try {
                     inner += h('Balance to return to the office (TShs)', 'balance_return', 'number', 'min=0 step=0.01 required');
                     inner += ta('Description', 'fin_description', '');
                     dynamic.insertAdjacentHTML('beforeend', group('Retirement Details', inner));
+                    // Ensure attachment is required for Retirement
+                    const att = document.getElementById('attachment');
+                    if (att) att.required = true;
                 } else if (v === 'Salary advance') {
                     let inner = '';
                     inner += h('Name', 'fin_name', 'text', 'required');

@@ -77,8 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!notifications || notifications.length === 0) {
             const emptyDiv = document.createElement('div');
-            emptyDiv.className = 'p-4 text-sm text-slate-300';
-            emptyDiv.textContent = 'No notifications.';
+                emptyDiv.className = 'p-4 text-sm text-gray-500 text-center';
+                emptyDiv.textContent = 'No notifications.';
             container.appendChild(emptyDiv);
             return;
         }
@@ -96,11 +96,11 @@ document.addEventListener('DOMContentLoaded', function() {
             title.textContent = n.title;
             
             const message = document.createElement('div');
-            message.className = 'text-slate-300 text-sm line-clamp-2';
+            message.className = 'text-gray-600 text-sm line-clamp-2';
             message.textContent = n.message;
             
             const time = document.createElement('div');
-            time.className = 'mt-1 text-xs text-slate-400';
+            time.className = 'mt-1 text-xs text-gray-500';
             time.textContent = n.created_at;
             
             const actions = document.createElement('div');
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (n.request_id) {
                 const viewLink = document.createElement('a');
-                viewLink.className = 'text-xs text-blue-300 hover:text-blue-200';
+                viewLink.className = 'text-xs text-blue-600 hover:text-blue-800';
                 viewLink.href = `index.php?action=view_request&id=${n.request_id}`;
                 viewLink.textContent = 'View';
                 actions.appendChild(viewLink);
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (parseInt(n.is_read) === 0) {
                 const markReadLink = document.createElement('a');
-                markReadLink.className = 'text-xs text-blue-300 hover:text-blue-200';
+                markReadLink.className = 'text-xs text-blue-600 hover:text-blue-800';
                 markReadLink.href = `index.php?action=mark_notification_read&id=${n.id}`;
                 markReadLink.textContent = 'Mark as read';
                 actions.appendChild(markReadLink);

@@ -24,6 +24,7 @@ if (!$token || !preg_match('/^[a-f0-9]{64}$/', $token)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf_post();
     $password = trim($_POST['password'] ?? '');
     $confirm  = trim($_POST['confirm_password'] ?? '');
     $token    = $_POST['token'] ?? '';
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Password | Chamber Request System</title>
+    <link rel="stylesheet" href="assets/ui.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { margin:0; padding:0; min-height:100vh; background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #1e3a8a 100%); font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display:flex; align-items:center; justify-content:center; }
@@ -77,17 +79,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .reset-header { text-align:center; margin-bottom:24px; }
         .reset-header h1 { margin:0; font-size:1.5rem; }
         .form-group { margin-bottom:18px; }
-        .form-group label { display:block; margin-bottom:8px; font-weight:500; color:#374151; font-size:0.9rem; }
+        .form-group label { display:block; margin-bottom:8px; font-weight:400; color:#374151; font-size:0.9rem; }
         .form-input { width:100%; padding:12px 14px; border:2px solid #e1e5e9; border-radius:12px; font-size:1rem; background:#fff; }
         .form-input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
-        .reset-btn { width:100%; padding:12px; background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color:#fff; border:none; border-radius:12px; font-weight:600; cursor:pointer; }
+        .reset-btn { width:100%; padding:12px; background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color:#fff; border:none; border-radius:12px; font-weight:400; cursor:pointer; }
         .success-message { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:0.9rem; text-align:center; }
         .error-message { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:0.9rem; text-align:center; }
         .back-link { text-align:center; margin-top:16px; }
-        .back-link a { color:#2563eb; text-decoration:none; font-weight:500; }
+        .back-link a { color:#2563eb; text-decoration:none; font-weight:400; }
     </style>
 </head>
-<body>
+<body class="ui-auth-page">
     <div class="reset-container">
         <div class="reset-header">
             <h1>Reset your password</h1>
@@ -105,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($showForm): ?>
         <form method="POST">
+            <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?php echo e($token); ?>" />
             <div class="form-group">
                 <label for="password">New Password</label>
@@ -119,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <?php if (!$showForm && !$message): ?>
-            <div class="back-link"><a href="forgot_password.php">← Request a new reset link</a></div>
+            <div class="back-link"><a href="index.php?action=forgot_password">← Request a new reset link</a></div>
         <?php endif; ?>
     </div>
 </body>

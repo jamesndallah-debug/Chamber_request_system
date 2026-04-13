@@ -13,8 +13,8 @@ $action = $_GET['action'] ?? 'login';
 // Get the current user from the session.
 $user = current_user();
 
-// Check authentication for all actions except login and register.
-if (!$user && $action !== 'login' && $action !== 'register') {
+// Check authentication for all actions except public auth pages
+if (!$user && !in_array($action, ['login','register','forgot_password','reset_password'], true)) {
     $action = 'login';
 }
 
@@ -28,8 +28,14 @@ $userModel = new UserModel($pdo);
 define('ACCESS_ALLOWED', true);
 
 switch ($action) {
+    case 'admin_login':
+        // Include the dedicated admin login page
+        include __DIR__ . '/admin_login.php';
+        break;
+        
     case 'login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            require_csrf_post();
             $username = isset($_POST['username']) ? trim($_POST['username']) : '';
             $password = $_POST['password'] ?? '';
             
@@ -59,6 +65,10 @@ switch ($action) {
                 }
 
                 if ($passwordMatches) {
+                    // Prevent session fixation
+                    if (session_status() === PHP_SESSION_ACTIVE) {
+                        @session_regenerate_id(true);
+                    }
                     $_SESSION['user'] = $user_data;
                     // Record last login timestamp
                     set_last_login($pdo, (int)$user_data['user_id']);
@@ -73,18 +83,14 @@ switch ($action) {
                     else if ($role === 2) $dest = 'hrm_dashboard';
                     else if ($role === 6) $dest = 'auditor_dashboard';
                     else if ($role === 5) $dest = 'finance_dashboard';
-                    else if ($role === 4) $dest = 'ed_dashboard';
+                    else if ($role === 4) $dest = 'ceo_dashboard';
                     header('Location: index.php?action=' . $dest);
                     exit;
                 }
             }
 
-            // More explicit feedback for debugging
-            if (!$user_data) {
-                $error = "User not found.";
-            } else {
-                $error = "Wrong password.";
-            }
+            // Avoid account enumeration
+            $error = "Invalid username or password.";
             include __DIR__ . '/login.php';
         } else {
             include __DIR__ . '/login.php';
@@ -115,12 +121,15 @@ switch ($action) {
             if ($role === 2) { header('Location: index.php?action=hrm_dashboard'); exit; }
             if ($role === 6) { header('Location: index.php?action=auditor_dashboard'); exit; }
             if ($role === 5) { header('Location: index.php?action=finance_dashboard'); exit; }
-            if ($role === 4) { header('Location: index.php?action=ed_dashboard'); exit; }
+            if ($role === 4) { header('Location: index.php?action=ceo_dashboard'); exit; }
         }
         include __DIR__ . '/dashboard.php';
         break;
 
     case 'upload_avatar':
+        if ($user && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            require_csrf_post();
+        }
         if ($user && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['avatar'];
             // Server-side size limit: 2MB
@@ -175,6 +184,7 @@ switch ($action) {
             header('Location: index.php?action=dashboard');
             exit;
         }
+        require_csrf_post();
         $rid = (int)($_POST['id'] ?? 0);
         if ($rid <= 0) {
             header('Location: index.php?action=dashboard');
@@ -255,13 +265,60 @@ switch ($action) {
     case 'check_notifications':
         if ($user) {
             try {
+                // Auto-generate reminders for Imprest requests when Retirement is not submitted within 7/14 days
+                $uid = (int)$user['user_id'];
+                try {
+                    $stmtImp = $pdo->prepare("SELECT request_id, created_at FROM requests WHERE user_id = ? AND request_type = 'Imprest request' AND created_at <= DATE_SUB(NOW(), INTERVAL 5 DAY)");
+                    $stmtImp->execute([$uid]);
+                    $imprests = $stmtImp->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($imprests as $imp) {
+                        $rid = (int)$imp['request_id'];
+                        $createdAt = (string)$imp['created_at'];
+                        $ageDays = (int)floor((time() - strtotime($createdAt)) / 86400);
+                        // Check if Retirement request exists created after this imprest
+                        $stmtRet = $pdo->prepare("SELECT COUNT(*) FROM requests WHERE user_id = ? AND request_type IN ('Retirement','TNCC retirement request') AND created_at >= ?");
+                        $stmtRet->execute([$uid, $createdAt]);
+                        $hasRetirement = ((int)$stmtRet->fetchColumn() > 0);
+                        if ($hasRetirement) { continue; }
+                        if ($ageDays >= 14) {
+                            // 14-day warning
+                            $chk = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND request_id = ? AND title = 'Imprest Deduction Warning'");
+                            $chk->execute([$uid, $rid]);
+                            if ((int)$chk->fetchColumn() === 0) {
+                                $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                                $msg = "More than 14 days have passed since your Imprest request without a Retirement submission. The imprest amount will be deducted from your salary if not retired immediately.";
+                                $ins->execute([$uid, 'Imprest Deduction Warning', $msg, $rid]);
+                            }
+                        } else if ($ageDays >= 7) {
+                            // 7-day reminder
+                            $chk = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND request_id = ? AND title = 'Imprest Retirement Reminder'");
+                            $chk->execute([$uid, $rid]);
+                            if ((int)$chk->fetchColumn() === 0) {
+                                $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                                $msg = "It's been 7 days since your Imprest request. Please submit the Retirement request.";
+                                $ins->execute([$uid, 'Imprest Retirement Reminder', $msg, $rid]);
+                            }
+                        } else if ($ageDays >= 5) {
+                            // 5-day early reminder
+                            $chk = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND request_id = ? AND title = 'Imprest Retirement Reminder (5 days)'");
+                            $chk->execute([$uid, $rid]);
+                            if ((int)$chk->fetchColumn() === 0) {
+                                $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                                $msg = "It\'s been 5 days since your Imprest request. Please submit your Retirement within the next 2 days.";
+                                $ins->execute([$uid, 'Imprest Retirement Reminder (5 days)', $msg, $rid]);
+                            }
+                        }
+                    }
+                } catch (Throwable $e) { /* ignore reminder generation errors */ }
+
+                // Now fetch counts and latest notifications
                 $stmtNc = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
-                $stmtNc->execute([(int)$user['user_id']]);
+                $stmtNc->execute([$uid]);
                 $unreadCount = (int)$stmtNc->fetchColumn();
                 
                 // Get the latest notifications
                 $stmtN = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
-                $stmtN->execute([(int)$user['user_id']]);
+                $stmtN->execute([$uid]);
                 $notifications = $stmtN->fetchAll(PDO::FETCH_ASSOC);
                 
                 header('Content-Type: application/json');
@@ -327,7 +384,7 @@ switch ($action) {
                         case 2: $statusValue = $r['hrm_status'] ?? $statusValue; break;
                         case 6: $statusValue = $r['auditor_status'] ?? $statusValue; break;
                         case 5: $statusValue = $r['finance_status'] ?? $statusValue; break;
-                        case 4: $statusValue = $r['ed_status'] ?? $statusValue; break;
+                        case 4: $statusValue = $r['ed_status'] ?? $statusValue; break; // CEO status
                     }
                 }
                 $sv = strtolower((string)$statusValue);
@@ -347,10 +404,24 @@ switch ($action) {
     case 'hrm_dashboard':
     case 'auditor_dashboard':
     case 'finance_dashboard':
-    case 'ed_dashboard':
+    case 'ceo_dashboard':
         include __DIR__ . '/dashboard.php';
         break;
     
+    case 'my_requests':
+        // Show My Requests page for any logged-in user
+        if ($user) {
+            $force_my_requests_tab = true;
+            // Hide sidebar only for admin users
+            if ((int)$user['role_id'] === 7) {
+                $hide_sidebar = true;
+            }
+            include __DIR__ . '/dashboard.php';
+            break;
+        }
+        header('Location: index.php?action=login');
+        exit;
+
     case 'admin_requests':
         // Allow Admin to access the standard dashboard focused on their own requests
         if ($user && (int)$user['role_id'] === 7) {
@@ -363,7 +434,7 @@ switch ($action) {
         exit;
         
     case 'vouchers':
-        // Only allow Finance and ED to access vouchers page
+        // Only allow Finance and CEO to access vouchers page
         if (!$user || !in_array($user['role_id'], [4, 5])) {
             header('Location: index.php?action=dashboard');
             exit;
@@ -371,10 +442,93 @@ switch ($action) {
         include __DIR__ . '/vouchers.php';
         break;
 
+    case 'export_financial_requests':
+        // Only allow Finance to export financial requests
+        if (!$user || (int)$user['role_id'] !== 5) {
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        try {
+            // Get all requests visible to Finance and filter to financial types
+            $requests = $requestModel->get_requests_for_role($user['role_id'], $user);
+            $financial_request_types = ['Imprest request', 'Reimbursement request', 'Salary advance', 'Retirement', 'TNCC retirement request'];
+            $financial_requests = array_values(array_filter($requests, function($r) use ($financial_request_types) {
+                return isset($r['request_type']) && in_array($r['request_type'], $financial_request_types, true);
+            }));
+
+            // CSV output headers
+            $filename = 'financial_requests_' . date('Ymd_His') . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            echo "\xEF\xBB\xBF"; // UTF-8 BOM for Excel compatibility
+
+            $out = fopen('php://output', 'w');
+            // Column headings
+            fputcsv($out, [
+                'Request ID', 'Request Type', 'Title', 'Description', 'Amount', 'Employee', 'Department', 'Overall Status',
+                'HOD Status', 'HRM Status', 'Auditor Status', 'Finance Status', 'CEO Status', 'Created At'
+            ]);
+
+            foreach ($financial_requests as $r) {
+                $desc = isset($r['description']) ? preg_replace('/\s+/', ' ', (string)$r['description']) : '';
+                fputcsv($out, [
+                    $r['request_id'] ?? '',
+                    $r['request_type'] ?? '',
+                    $r['title'] ?? '',
+                    $desc,
+                    $r['amount'] ?? '',
+                    $r['employee_fullname'] ?? ($r['fullname'] ?? ''),
+                    $r['department'] ?? '',
+                    $r['status_name'] ?? '',
+                    $r['hod_status'] ?? '',
+                    $r['hrm_status'] ?? '',
+                    $r['auditor_status'] ?? '',
+                    $r['finance_status'] ?? '',
+                    $r['ed_status'] ?? '',
+                    isset($r['created_at']) ? date('Y-m-d H:i:s', strtotime($r['created_at'])) : ''
+                ]);
+            }
+            fclose($out);
+            exit;
+        } catch (Throwable $e) {
+            // Fallback to dashboard with error flash if something goes wrong
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to export financial requests.'];
+            header('Location: index.php?action=finance_dashboard');
+            exit;
+        }
+
+    case 'forgot_password':
+        // Public route: show forgot password page and handle submit
+        include __DIR__ . '/forgot_password.php';
+        break;
+
+    case 'reset_password':
+        // Public route: reset password via token
+        include __DIR__ . '/reset_password.php';
+        break;
+
     case 'new_request':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            require_csrf_post();
             $details_json = $_POST['details_json'] ?? '';
             $request_type = $_POST['request_type'] ?? '';
+            // Validate that any date fields are not in the past
+            try {
+                $today = date('Y-m-d');
+                $details = json_decode($details_json, true);
+                if (is_array($details)) {
+                    foreach ($details as $k => $v) {
+                        if (is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) {
+                            if ($v < $today) {
+                                $error = "Dates must be today or later. Field '$k' cannot be in the past.";
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable $e) { /* ignore */ }
             // Leave balance validation using actual balances where available
             $days = (int)($_POST['days_applied'] ?? 0);
             if (in_array($request_type, ['Annual leave','Compassionate leave','Paternity leave','Maternity leave'], true)) {
@@ -415,6 +569,7 @@ switch ($action) {
             ];
             
             $upload_success = false;
+            // Attachment upload handling
             if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
                 $file_name = $_FILES['attachment']['name'];
                 $file_tmp = $_FILES['attachment']['tmp_name'];
@@ -436,6 +591,14 @@ switch ($action) {
             } else if ($_FILES['attachment']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $error = "File upload failed with error code: " . $_FILES['attachment']['error'];
             }
+            // Enforce mandatory attachment for Retirement requests
+            if (!isset($error)) {
+                if ($request_type === 'Retirement' || $request_type === 'TNCC retirement request') {
+                    if (!$upload_success || empty($request_data['attachment_path'])) {
+                        $error = 'Attachment is required for Retirement requests. Please attach supporting documents.';
+                    }
+                }
+            }
             
             if (!isset($error)) {
                 $result = $requestModel->create_request($request_data);
@@ -449,29 +612,33 @@ switch ($action) {
                         // Get user department for HR and Administration workflow
                         $userDept = $user['department'] ?? '';
                         
-                        if ($type === 'TCCIA retirement request') {
-                            // For all applicants: skip HOD, HRM, Auditor → Finance then ED
+                        if ($type === 'Retirement' || $type === 'TNCC retirement request') {
+                            // For all applicants: skip HOD, HRM, Auditor → Finance then CEO
                             // Mark skipped roles as approved so they never see these requests
                             $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                             $stmt->execute([$lastId]);
                         } else if ($type === 'Salary advance') {
-                            // Salary Advance routing depends on applicant role, but chain is always HRM -> Finance -> ED.
+                            // Salary Advance routing depends on applicant role, but chain is always HRM -> Finance -> CEO.
                             // Ensure HOD and Auditor are skipped (marked approved) so they never see these.
                             switch ($userRole) {
-                                case 2: // HRM applies: goes to Finance -> ED (HRM step auto-approved)
+                                case 2: // HRM applies: goes to Finance -> CEO (HRM step auto-approved)
                                     $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                                     $stmt->execute([$lastId]);
                                     break;
-                                case 5: // Finance applies: goes to HRM -> ED only (Finance auto-approved)
+                                case 5: // Finance applies: goes to HRM -> CEO only (Finance auto-approved)
                                     $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?");
                                     $stmt->execute([$lastId]);
                                     break;
-                                case 6: // Internal Auditor applies: goes to HRM -> Finance -> ED (Auditor auto-approved)
+                                case 6: // Internal Auditor applies: goes to HRM -> Finance -> CEO (Auditor auto-approved)
                                     $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                                     $stmt->execute([$lastId]);
                                     break;
                                 case 3: // HOD applies: goes to HRM -> Finance -> ED (HOD auto-approved)
                                     $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
+                                case 4: // CEO applies: auto-approve all except Finance and CEO
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                                     $stmt->execute([$lastId]);
                                     break;
                                 default: // Employee or others: HRM -> Finance -> ED
@@ -528,6 +695,12 @@ switch ($action) {
                                 case 3: // HOD
                                     // HOD → HRM → Internal Auditor → Finance → ED
                                     $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    $stmt->execute([$lastId]);
+                                    break;
+                                    
+                                case 4: // CEO
+                                    // CEO applies: auto-approve HOD, HRM, Auditor; pending Finance → CEO
+                                    $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
                                     $stmt->execute([$lastId]);
                                     break;
                                     
@@ -591,7 +764,7 @@ switch ($action) {
                 header('Location: index.php?action=dashboard');
                 exit;
             }
-            if ($rtype === 'TCCIA retirement request' && !in_array($roleId, [5,4], true)) {
+            if (($rtype === 'Retirement' || $rtype === 'TNCC retirement request') && !in_array($roleId, [5,4], true)) {
                 header('Location: index.php?action=dashboard');
                 exit;
             }
@@ -607,6 +780,7 @@ switch ($action) {
         
     case 'process_request':
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
+            require_csrf_post();
             $request_id = $_POST['id'] ?? null;
             $status = $_POST['status'] ?? null;
             $remark = $_POST['remark'] ?? null;
@@ -616,7 +790,7 @@ switch ($action) {
                 if ($request && can_approve($user['role_id'], $request)) {
                     $result = $requestModel->update_status($request_id, $user['role_id'], $status, $remark);
                     if ($result) {
-                        // Trigger confetti on next page load when ED gives final approval
+                        // Trigger confetti on next page load when CEO gives final approval
                         if ((int)$user['role_id'] === 4 && $status === 'approved') {
                             $_SESSION['confetti'] = 'ed_approved';
                         }
@@ -641,10 +815,50 @@ switch ($action) {
             header('Location: index.php?action=dashboard');
             exit;
         }
+        // If this is a directorate/role settings POST, let admin_management.php handle it.
+        $settingsPost =
+            isset($_POST['add_directorate']) ||
+            isset($_POST['edit_directorate_id']) ||
+            isset($_POST['activate_directorate_id']) ||
+            isset($_POST['deactivate_directorate_id']) ||
+            isset($_POST['delete_directorate_id']) ||
+            isset($_POST['add_role']) ||
+            isset($_POST['edit_role_id']) ||
+            isset($_POST['activate_role_id']) ||
+            isset($_POST['deactivate_role_id']) ||
+            isset($_POST['delete_role_id']);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $settingsPost) {
+            include __DIR__ . '/admin_management.php';
+            break;
+        }
         // Handle admin POST actions for user management
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            require_csrf_post();
             try {
-                if (isset($_POST['admin_deactivate_user'])) {
+                if (isset($_POST['admin_create_user'])) {
+                    $fullname = trim($_POST['fullname'] ?? '');
+                    $username = trim($_POST['username'] ?? '');
+                    $password = (string)($_POST['password'] ?? '');
+                    $department = (string)($_POST['department'] ?? '');
+                    $directorate = trim($_POST['directorate'] ?? '');
+                    $role_id = (int)($_POST['role_id'] ?? 0);
+
+                    if ($fullname === '' || $username === '' || $password === '' || $department === '' || $directorate === '' || $role_id <= 0) {
+                        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Please fill all fields.'];
+                    } else {
+                        $check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+                        $check->execute([$username]);
+                        if ((int)$check->fetchColumn() > 0) {
+                            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Username already exists.'];
+                        } else {
+                            $hash = password_hash($password, PASSWORD_BCRYPT);
+                            $stmt = $pdo->prepare("INSERT INTO users (fullname, username, password, department, directorate, role_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+                            $ok = $stmt->execute([$fullname, $username, $hash, $department, $directorate, $role_id]);
+                            $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User created successfully!' : 'Failed to create user.'];
+                        }
+                    }
+                } else if (isset($_POST['admin_deactivate_user'])) {
                     $uid = (int)($_POST['user_id'] ?? 0);
                     if ($uid && $uid !== (int)$user['user_id']) {
                         $stmt = $pdo->prepare("UPDATE users SET active = 0 WHERE user_id = ?");
@@ -762,6 +976,7 @@ switch ($action) {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user && $user['role_id'] == 5) {
+            require_csrf_post();
             // Only finance can create vouchers
             $request_id = isset($_POST['request_id']) ? (int)$_POST['request_id'] : 0;
             $voucher_type = $_POST['voucher_type'] ?? '';
@@ -808,11 +1023,11 @@ switch ($action) {
             $voucher_id = $voucherModel->create_voucher($voucher_data);
             
             if ($voucher_id) {
-                // Get ED user ID for notification
+                // Get CEO user ID for notification
                 require_once __DIR__ . '/voucher_functions.php';
-                $ed_id = get_ed_user_id($pdo);
+                $ed_id = get_ed_user_id($pdo); // CEO user ID
                 
-                // Create notification for ED
+                // Create notification for CEO
                 if ($ed_id) {
                     $title = ($voucher_type == 'petty_cash') ? 'New Petty Cash Voucher' : 'New Payment Voucher';
                     $message_text = "A new {$title} (PV: {$voucher_data['pv_no']}) has been created by Finance and is awaiting your approval.";
@@ -854,7 +1069,7 @@ switch ($action) {
             exit;
         }
         
-        // Only allow Finance and ED to access voucher details
+        // Only allow Finance and CEO to access voucher details
         if (!$user || !in_array($user['role_id'], [4, 5])) {
             header('Location: index.php?action=dashboard');
             exit;
@@ -877,6 +1092,7 @@ switch ($action) {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
+            require_csrf_post();
             $voucher_id = isset($_POST['voucher_id']) ? (int)$_POST['voucher_id'] : 0;
             $status = $_POST['status'] ?? '';
             $role = $_POST['role'] ?? '';
@@ -907,17 +1123,17 @@ switch ($action) {
                 require_once __DIR__ . '/voucher_functions.php';
                 $finance_id = get_finance_manager_id($pdo);
                 if ($finance_id) {
-                    $title = "Voucher {$status} by ED";
-                    $message = "Voucher {$voucher['pv_no']} has been {$status} by Executive Director";
+                    $title = "Voucher {$status} by CEO";
+                    $message = "Voucher {$voucher['pv_no']} has been {$status} by Chief Executive Officer";
                     create_voucher_notification($pdo, $finance_id, $title, $message, $voucher_id);
                 }
             } elseif ($role == 'finance' && $user['role_id'] == 5) {
                 $can_update = true;
                 $result = $voucherModel->update_finance_status($voucher_id, $status, $remark);
                 
-                // Create notification for ED
+                // Create notification for CEO
                 require_once __DIR__ . '/voucher_functions.php';
-                $ed_id = get_ed_user_id($pdo);
+                $ed_id = get_ed_user_id($pdo); // CEO user ID
                 if ($ed_id) {
                     $title = "Voucher {$status} by Finance";
                     $message = "Voucher {$voucher['pv_no']} has been {$status} by Finance Manager";
@@ -946,6 +1162,7 @@ switch ($action) {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
+            require_csrf_post();
             $voucher_id = isset($_POST['voucher_id']) ? (int)$_POST['voucher_id'] : 0;
             $recipient_id = isset($_POST['recipient_id']) ? (int)$_POST['recipient_id'] : 0;
             $message = $_POST['message'] ?? '';
@@ -1005,7 +1222,7 @@ switch ($action) {
             define('ACCESS_ALLOWED', true);
         }
         
-        // Only allow Finance and ED to access vouchers
+        // Only allow Finance and CEO to access vouchers
         if (!$user || !in_array($user['role_id'], [4, 5])) {
             header('Location: index.php?action=dashboard');
             exit;

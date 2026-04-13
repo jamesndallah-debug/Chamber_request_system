@@ -67,6 +67,29 @@ set_exception_handler('handle_exception');
 // Set session lifetime before starting the session
 @ini_set('session.gc_maxlifetime', 1200); // 20 minutes
 @ini_set('session.cookie_lifetime', 0);   // until browser closes
+@ini_set('session.use_strict_mode', 1);
+@ini_set('session.use_only_cookies', 1);
+@ini_set('session.cookie_httponly', 1);
+
+// Cookie security (secure only when HTTPS)
+$__isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+
+// Set cookie params before session_start (PHP 7.3+ supports array form; fall back for older versions)
+try {
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => $__isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    } else {
+        // Legacy fallback: cannot reliably set SameSite, but keep httponly/secure best-effort
+        @ini_set('session.cookie_secure', $__isHttps ? '1' : '0');
+    }
+} catch (Throwable $e) { /* ignore */ }
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

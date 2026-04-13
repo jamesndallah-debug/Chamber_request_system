@@ -5,6 +5,7 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf_post();
     $email = trim($_POST['email'] ?? '');
     
     if (empty($email)) {
@@ -28,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$user['user_id'], $token, $expires, $token, $expires]);
                 
                 // Send the reset email
-                $resetLink = rtrim(BASE_URL, '/') . '/reset_password.php?token=' . urlencode($token);
+                $resetLink = rtrim(BASE_URL, '/') . '/index.php?action=reset_password&token=' . urlencode($token);
                 $subject = 'Reset your password';
                 $html = '<p>Hello ' . e($user['fullname'] ?? 'User') . ',</p>'
                     . '<p>We received a request to reset your password. Click the link below to set a new password. This link will expire in 1 hour.</p>'
@@ -59,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password | Chamber Request System</title>
+    <link rel="stylesheet" href="assets/ui.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -95,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         .reset-header h1 {
             font-size: 2rem;
-            font-weight: 700;
+            font-weight: 400;
             color: #1a1a1a;
             margin: 0 0 10px 0;
         }
@@ -114,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 500;
+            font-weight: 400;
             color: #374151;
             font-size: 0.875rem;
         }
@@ -154,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: none;
             border-radius: 12px;
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
             transition: all 0.15s ease;
             margin-bottom: 24px;
@@ -175,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .back-link a {
             color: #2563eb;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 400;
             font-size: 0.9rem;
         }
         
@@ -206,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
-<body>
+<body class="ui-auth-page">
     <div class="reset-container">
         <div class="reset-header">
             <h1>Forgot Password?</h1>
@@ -222,6 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
         
         <form method="POST">
+            <?= csrf_field() ?>
             <div class="form-group">
                 <label for="email">📧 Email Address</label>
                 <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" required>

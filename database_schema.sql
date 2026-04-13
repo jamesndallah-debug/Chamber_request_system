@@ -78,7 +78,7 @@ INSERT INTO `roles` (`role_id`, `role_name`) VALUES
 (1, 'Employee'),
 (2, 'HRM'),
 (3, 'HOD'),
-(4, 'ED'),
+(4, 'CEO'),
 (5, 'Finance'),
 (6, 'Internal Auditor'),
 (7, 'Admin');

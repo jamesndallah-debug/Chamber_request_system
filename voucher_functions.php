@@ -166,6 +166,7 @@ function render_voucher_form($request, $voucher_type) {
             <h3 class="font-semibold text-gray-700 mb-4" id="approvalFormTitle">Approve Voucher</h3>
             
             <form action="index.php?action=update_voucher_status" method="post" class="space-y-4">
+                <?= csrf_field() ?>
                 <input type="hidden" name="voucher_id" value="0">
                 <input type="hidden" name="status" id="approvalStatus" value="approved">
                 <input type="hidden" name="role" value="ed">  <!-- Add role parameter for ED approval -->
@@ -196,8 +197,9 @@ function render_voucher_form($request, $voucher_type) {
             </div>
             
             <form action="index.php?action=send_voucher_message" method="post" class="space-y-4">
+                <?= csrf_field() ?>
                 <input type="hidden" name="voucher_id" value="0">
-                <input type="hidden" name="recipient_id" value="<?= ($user['role_id'] == 5) ? get_ed_user_id($pdo) : get_finance_manager_id($pdo) ?>">
+                <input type="hidden" name="recipient_id" value="<?= ($user['role_id'] == 5) ? get_ed_user_id($pdo) : get_finance_manager_id($pdo) // For CEO role ?>">
                 
                 <div>
                     <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Send Message</label>
@@ -240,6 +242,7 @@ function render_voucher_form($request, $voucher_type) {
         </script>
         
         <form action="index.php?action=create_voucher" method="post" class="space-y-6">
+            <?= csrf_field() ?>
             <input type="hidden" name="request_id" value="<?= e($request['request_id']) ?>">
             <input type="hidden" name="voucher_type" value="<?= e($voucher_type) ?>">
             <input type="hidden" name="prepared_by" value="<?= e($user['user_id']) ?>">
@@ -532,7 +535,7 @@ function render_voucher_details($voucher = null, $can_approve = false) {
                 </div>
                 
                 <div class="info-item">
-                    <div class="info-label">Executive Director Status</div>
+                    <div class="info-label">Chief Executive Officer Status</div>
                     <div class="info-value">
                         <?php 
                         $edStatusClass = $voucher['ed_status'] == 'approved' ? 'status-approved' : ($voucher['ed_status'] == 'rejected' ? 'status-rejected' : 'status-pending');
@@ -547,7 +550,7 @@ function render_voucher_details($voucher = null, $can_approve = false) {
                         <?php endif; ?>
                         <?php if ($voucher['ed_remark']): ?>
                             <div class="mt-3 p-3 bg-gray-100 rounded-lg">
-                                <div class="info-label text-xs">ED Remark</div>
+                                <div class="info-label text-xs">CEO Remark</div>
                                 <div class="text-sm mt-1"><?= nl2br(e($voucher['ed_remark'])) ?></div>
                             </div>
                         <?php endif; ?>
@@ -558,16 +561,17 @@ function render_voucher_details($voucher = null, $can_approve = false) {
     </div>
     
     <?php if ($can_approve && $user['role_id'] == 4 && $voucher['ed_status'] == 'pending'): ?>
-    <!-- ED Approval Form -->
+    <!-- CEO Approval Form -->
     <div class="voucher-card no-print">
         <div class="section-header">
             <i class="fas fa-crown text-xl"></i>
-            Executive Director Action Required
+            Chief Executive Officer Action Required
         </div>
         <div class="section-content">
             <form action="index.php?action=update_voucher_status" method="post" class="space-y-6">
+                <?= csrf_field() ?>
                 <input type="hidden" name="voucher_id" value="<?= e($voucher['voucher_id']) ?>">
-                <input type="hidden" name="role" value="ed">
+                <input type="hidden" name="role" value="ceo">
                 
                 <div>
                     <div class="info-label">Remark (Optional)</div>
@@ -596,6 +600,7 @@ function render_voucher_details($voucher = null, $can_approve = false) {
         </div>
         <div class="section-content">
             <form action="index.php?action=update_voucher_status" method="post" class="space-y-6">
+                <?= csrf_field() ?>
                 <input type="hidden" name="voucher_id" value="<?= e($voucher['voucher_id']) ?>">
                 <input type="hidden" name="role" value="finance">
                 
@@ -634,7 +639,7 @@ function render_voucher_messages($voucher_id) {
     $messages = $voucherModel->get_voucher_messages($voucher_id);
     
     // Get ED and Finance user IDs for the message form
-    $ed_id = get_ed_user_id($pdo);
+    $ed_id = get_ed_user_id($pdo); // CEO user ID
     $finance_id = get_finance_manager_id($pdo);
     
     // Determine recipient based on user role using model method
@@ -670,6 +675,7 @@ function render_voucher_messages($voucher_id) {
         
         <?php if ($can_communicate && $recipient_id): ?>
             <form action="index.php?action=send_voucher_message" method="post" class="space-y-4">
+                <?= csrf_field() ?>
                 <input type="hidden" name="voucher_id" value="<?= isset($voucher_id) ? e($voucher_id) : 0 ?>">
                 <input type="hidden" name="recipient_id" value="<?= isset($recipient_id) ? e($recipient_id) : 0 ?>">
                 
@@ -797,7 +803,7 @@ function render_status_badges($finance_status, $ed_status) {
     }
     
     $output .= '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' . $ed_class . '">';
-    $output .= 'ED: ' . ucfirst($ed_status);
+    $output .= 'CEO: ' . ucfirst($ed_status);
     $output .= '</span>';
     $output .= '</div>';
     

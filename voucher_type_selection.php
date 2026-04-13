@@ -31,64 +31,22 @@ $page_title = 'Select Voucher Type';
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            background-color: #f9fafb;
             position: relative;
             overflow-x: hidden;
         }
         
-        /* Animated background orbs */
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.5;
-            z-index: -1;
-        }
-        
-        .orb-1 {
-            width: 400px;
-            height: 400px;
-            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-            top: -100px;
-            left: -100px;
-            animation: float1 15s ease-in-out infinite;
-        }
-        
-        .orb-2 {
-            width: 300px;
-            height: 300px;
-            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-            bottom: -50px;
-            right: -50px;
-            animation: float2 18s ease-in-out infinite;
-        }
-        
-        @keyframes float1 {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(50px, 50px); }
-        }
-        
-        @keyframes float2 {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(-50px, -30px); }
-        }
-        
         /* Glass effect */
         .glass {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
         
-        /* Title gradient */
-        .title-gradient {
-            background: linear-gradient(to right, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
+        /* Title gradient removed */
+        .title-gradient { color:#1f2937; }
         
         /* Voucher type card styling */
         .voucher-card {
@@ -98,35 +56,41 @@ $page_title = 'Select Voucher Type';
         
         .voucher-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border-color: #e5e7eb;
         }
         
         .voucher-card.payment {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
         }
         
         .voucher-card.petty-cash {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
-    <!-- Animated background orbs -->
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Orb removed -->
     
-    <div class="flex min-h-screen">
-        <?php include 'sidebar.php'; ?>
+    <div class="min-h-screen">
+        <!-- Back to Dashboard Button -->
+        <div class="fixed top-4 left-4 z-50">
+            <a href="index.php?action=dashboard" class="flex items-center gap-2 bg-white hover:bg-gray-50 text-blue-600 border border-gray-200 px-4 py-2 rounded-lg shadow-sm transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span class="font-medium">Back to Dashboard</span>
+            </a>
+        </div>
         
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex flex-col overflow-hidden pt-16">
             <main class="flex-1 overflow-x-hidden overflow-y-auto p-6">
-                <div class="container mx-auto max-w-4xl">
+                <div class="max-w-4xl mx-auto">
                     <div class="text-center mb-8">
                         <h1 class="text-4xl font-bold title-gradient mb-4">
                             Create New Voucher
                         </h1>
-                        <p class="text-gray-300 text-lg">
+                        <p class="text-gray-600 text-lg">
                             Select the type of voucher you want to create
                         </p>
                     </div>
@@ -135,36 +99,36 @@ $page_title = 'Select Voucher Type';
                         <!-- Payment Voucher Card -->
                         <div class="voucher-card payment glass p-8 text-center cursor-pointer" onclick="openVoucherForm('payment')">
                             <div class="mb-6">
-                                <i class="fas fa-credit-card text-6xl text-blue-400"></i>
+                                <i class="fas fa-credit-card text-6xl text-blue-500"></i>
                             </div>
-                            <h2 class="text-2xl font-bold mb-4 text-blue-400">Payment Voucher</h2>
-                            <p class="text-gray-300 mb-6">
+                            <h2 class="text-2xl font-bold mb-4 text-blue-600">Payment Voucher</h2>
+                            <p class="text-gray-600 mb-6">
                                 Create a voucher for bank transfers and larger payments. Includes all required fields with bank transfer payment method.
                             </p>
-                            <div class="bg-blue-500/20 p-4 rounded-lg">
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                 <div class="flex items-center justify-center mb-2">
-                                    <i class="fas fa-check-circle text-blue-400 mr-2"></i>
-                                    <span class="font-semibold text-blue-400">Bank Transfer</span>
+                                    <i class="fas fa-check-circle text-blue-500 mr-2"></i>
+                                    <span class="font-semibold text-blue-600">Bank Transfer</span>
                                 </div>
-                                <p class="text-sm text-gray-300">Professional payment processing</p>
+                                <p class="text-sm text-gray-600">Professional payment processing</p>
                             </div>
                         </div>
                         
                         <!-- Petty Cash Voucher Card -->
                         <div class="voucher-card petty-cash glass p-8 text-center cursor-pointer" onclick="openVoucherForm('petty_cash')">
                             <div class="mb-6">
-                                <i class="fas fa-money-bill-wave text-6xl text-green-400"></i>
+                                <i class="fas fa-money-bill-wave text-6xl text-green-500"></i>
                             </div>
-                            <h2 class="text-2xl font-bold mb-4 text-green-400">Petty Cash Voucher</h2>
-                            <p class="text-gray-300 mb-6">
+                            <h2 class="text-2xl font-semibold mb-4 text-green-600">Petty Cash Voucher</h2>
+                            <p class="text-gray-600 mb-6">
                                 Create a voucher for small cash payments and everyday expenses. Perfect for minor transactions.
                             </p>
-                            <div class="bg-green-500/20 p-4 rounded-lg">
+                            <div class="bg-green-50 p-4 rounded-lg border border-green-100">
                                 <div class="flex items-center justify-center mb-2">
-                                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
-                                    <span class="font-semibold text-green-400">Cash Payment</span>
+                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                    <span class="font-semibold text-green-600">Cash Payment</span>
                                 </div>
-                                <p class="text-sm text-gray-300">Quick cash transactions</p>
+                                <p class="text-sm text-gray-600">Quick cash transactions</p>
                             </div>
                         </div>
                     </div>
