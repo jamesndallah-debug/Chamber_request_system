@@ -270,54 +270,32 @@ $page_title = ($voucher['voucher_type'] == 'petty_cash') ? 'Petty Cash Voucher' 
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-    <div class="min-h-screen">
-        <!-- Back to Dashboard Button -->
-        <div class="fixed top-4 left-4 z-50">
-            <a href="index.php?action=dashboard" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span class="font-medium">Back to Dashboard</span>
-            </a>
-        </div>
+<body class="bg-gray-50 text-gray-800">
+    
+    <div class="flex min-h-screen">
+        <?php include __DIR__ . '/sidebar.php'; ?>
         
-        <div class="flex flex-col overflow-hidden pt-16">
-            <main class="flex-1 overflow-x-hidden overflow-y-auto p-6">
+        <div class="flex-1 flex flex-col ml-64">
+            <!-- Top Nav -->
+            <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-5 flex items-center justify-between text-gray-800 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <a href="index.php?action=vouchers" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span class="font-medium">Back</span>
+                    </a>
+                    <h1 class="text-2xl font-semibold"><?= e($page_title) ?> Details</h1>
+                </div>
+                <div class="flex items-center gap-4 no-print">
+                    <button onclick="printVoucher()" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-4 py-2 rounded-lg shadow-sm transition-colors">
+                        <i class="fas fa-print mr-2"></i> Print
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 p-6">
                 <div class="max-w-7xl mx-auto px-4 py-8">
-                    <!-- Enhanced Page Header -->
-                    <div class="page-header">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h1 class="page-title"><?= e($page_title) ?> Details</h1>
-                                <div class="voucher-type-badge <?= $voucher['voucher_type'] == 'petty_cash' ? 'voucher-type-petty' : 'voucher-type-payment' ?>">
-                                    <?php if ($voucher['voucher_type'] == 'petty_cash'): ?>
-                                        <i class="fas fa-money-bill-wave"></i>
-                                        Petty Cash Voucher
-                                    <?php else: ?>
-                                        <i class="fas fa-credit-card"></i>
-                                        Payment Voucher
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            
-                            <div class="flex space-x-3">
-                                <button onclick="printVoucher()" class="btn btn-primary no-print">
-                                    <i class="fas fa-print"></i> Print Voucher
-                                </button>
-                                
-                                <?php if ($request): ?>
-                                <a href="index.php?action=view_request&id=<?= e($request['request_id']) ?>" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left"></i> Back to Request
-                                </a>
-                                <?php else: ?>
-                                <a href="index.php?action=dashboard" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                                </a>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
         
                     <?php if (isset($error)): ?>
                     <div class="alert alert-error" role="alert">

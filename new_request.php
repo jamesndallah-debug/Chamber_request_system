@@ -43,10 +43,18 @@ try {
     <?php include __DIR__ . '/sidebar.php'; ?>
     
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col ml-64">
         <!-- Top Nav -->
         <header class="bg-white/80 backdrop-blur border-b border-gray-200 shadow-sm p-4 flex items-center justify-between sticky top-0 z-40 text-gray-800">
-            <h1 class="text-xl font-semibold">New Request</h1>
+            <div class="flex items-center gap-4">
+                <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span class="font-medium">Back</span>
+                </a>
+                <h1 class="text-xl font-semibold">New Request</h1>
+            </div>
             <div class="flex items-center space-x-4">
                 <p>
                     Welcome, <span class="font-medium text-gray-800"><?= e($user['fullname']) ?></span>

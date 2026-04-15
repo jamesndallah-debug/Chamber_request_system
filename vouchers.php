@@ -262,30 +262,29 @@ $page_title = 'Vouchers Management';
 </head>
 <body class="bg-gray-50 text-gray-800">
     
-    <div class="min-h-screen">
-        <!-- Back to Dashboard Button -->
-        <div class="fixed top-4 left-4 z-50">
-            <a href="index.php?action=dashboard" class="flex items-center gap-2 bg-white hover:bg-gray-50 text-blue-600 border border-gray-200 px-4 py-2 rounded-lg shadow-sm transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span class="font-medium">Back to Dashboard</span>
-            </a>
-        </div>
+    <div class="flex min-h-screen">
+        <?php include __DIR__ . '/sidebar.php'; ?>
         
-        <div class="flex flex-col overflow-hidden pt-16">
-            <main class="flex-1 overflow-x-hidden overflow-y-auto p-6">
-                <div class="max-w-7xl mx-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-3xl font-bold text-gray-900">
-                            Vouchers Management <span class="chip">💳</span>
-                        </h1>
-                        <?php if ($user['role_id'] == 5): // Only Finance can create vouchers ?>
-                        <a href="index.php?action=select_voucher_type" class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg" target="_blank">
-                            <i class="fas fa-plus mr-2"></i> Create Voucher
-                        </a>
-                        <?php endif; ?>
-                    </div>
+        <div class="flex-1 flex flex-col ml-64">
+            <!-- Top Nav -->
+            <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-5 flex items-center justify-between text-gray-800 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span class="font-medium">Back</span>
+                    </a>
+                    <h1 class="text-2xl font-semibold">Vouchers Management <span class="chip">💳</span></h1>
+                </div>
+                <?php if ($user['role_id'] == 5): // Only Finance can create vouchers ?>
+                <a href="index.php?action=select_voucher_type" class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg" target="_blank">
+                    <i class="fas fa-plus mr-2"></i> Create Voucher
+                </a>
+                <?php endif; ?>
+            </header>
+
+            <main class="flex-1 p-6">
                     
                     <!-- Search Bar -->
                     <div class="mb-4 search-container">

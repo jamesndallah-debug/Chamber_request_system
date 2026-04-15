@@ -20,14 +20,17 @@ $user = $_SESSION['user'];
 if (isset($_POST['delete_message'])) {
     require_csrf_post();
     $message_id = (int)$_POST['message_id'];
+    $source_type = $_POST['source_type'] ?? 'message';
     try {
-        // Allow user to delete messages they sent or received
-        $stmt = $pdo->prepare("DELETE FROM user_messages WHERE id = ? AND (to_user_id = ? OR from_user_id = ?)");
-        if ($stmt->execute([$message_id, $user['user_id'], $user['user_id']])) {
-            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Message deleted successfully.'];
+        if ($source_type === 'notification') {
+            $stmt = $pdo->prepare("DELETE FROM notifications WHERE id = ? AND user_id = ?");
+            $stmt->execute([$message_id, $user['user_id']]);
         } else {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to delete message.'];
+            // Allow user to delete messages they sent or received
+            $stmt = $pdo->prepare("DELETE FROM user_messages WHERE id = ? AND (to_user_id = ? OR from_user_id = ?)");
+            $stmt->execute([$message_id, $user['user_id'], $user['user_id']]);
         }
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Message deleted successfully.'];
     } catch (Exception $e) {
         error_log("Error deleting message: " . $e->getMessage());
         $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to delete message.'];
@@ -40,9 +43,15 @@ if (isset($_POST['delete_message'])) {
 if (isset($_POST['mark_read'])) {
     require_csrf_post();
     $message_id = (int)$_POST['message_id'];
+    $source_type = $_POST['source_type'] ?? 'message';
     try {
-        $stmt = $pdo->prepare("UPDATE user_messages SET is_read = 1 WHERE id = ? AND to_user_id = ?");
-        $stmt->execute([$message_id, $user['user_id']]);
+        if ($source_type === 'notification') {
+            $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
+            $stmt->execute([$message_id, $user['user_id']]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE user_messages SET is_read = 1 WHERE id = ? AND to_user_id = ?");
+            $stmt->execute([$message_id, $user['user_id']]);
+        }
     } catch (Exception $e) {
         error_log("Error marking message as read: " . $e->getMessage());
     }
@@ -50,67 +59,132 @@ if (isset($_POST['mark_read'])) {
     exit;
 }
 
-// Get user's messages (both received and sent messages)
+// Get filter values
+$filter_month = $_GET['month'] ?? '';
+$filter_year = $_GET['year'] ?? '';
+$filter_date = $_GET['date'] ?? '';
+$filter_sender = $_GET['sender'] ?? '';
+
+// Get user's messages and notifications
 $messages = [];
 try {
-    // First check if user_messages table exists
-    $check_table = $pdo->prepare("SHOW TABLES LIKE 'user_messages'");
-    $check_table->execute();
+    // First check if tables exist
+    $check_messages = $pdo->prepare("SHOW TABLES LIKE 'user_messages'");
+    $check_messages->execute();
+    $has_messages = $check_messages->fetchColumn();
+
+    $check_notifications = $pdo->prepare("SHOW TABLES LIKE 'notifications'");
+    $check_notifications->execute();
+    $has_notifications = $check_notifications->fetchColumn();
     
-    if ($check_table->fetchColumn()) {
-        $stmt = $pdo->prepare("
-            SELECT m.*, 
+    if ($has_messages) {
+        $where_messages = ["(m.to_user_id = ? OR m.from_user_id = ?)"];
+        $params_messages = [$user['user_id'], $user['user_id']];
+        
+        $where_notif = ["n.user_id = ?"];
+        $params_notif = [$user['user_id']];
+        
+        if ($filter_month) {
+            $where_messages[] = "MONTH(m.created_at) = ?";
+            $params_messages[] = $filter_month;
+            $where_notif[] = "MONTH(n.created_at) = ?";
+            $params_notif[] = $filter_month;
+        }
+        if ($filter_year) {
+            $where_messages[] = "YEAR(m.created_at) = ?";
+            $params_messages[] = $filter_year;
+            $where_notif[] = "YEAR(n.created_at) = ?";
+            $params_notif[] = $filter_year;
+        }
+        if ($filter_date) {
+            $where_messages[] = "DATE(m.created_at) = ?";
+            $params_messages[] = $filter_date;
+            $where_notif[] = "DATE(n.created_at) = ?";
+            $params_notif[] = $filter_date;
+        }
+        if ($filter_sender) {
+            if ($filter_sender === 'System') {
+                // If filtering by System, we only want notifications or messages where sender is System (which shouldn't happen for user_messages)
+                $where_messages[] = "1=0"; // No user messages from 'System'
+            } else {
+                $where_messages[] = "sender.fullname = ?";
+                $params_messages[] = $filter_sender;
+                $where_notif[] = "1=0"; // Notifications are always from 'System'
+            }
+        }
+
+        $query = "
+            SELECT m.id, m.from_user_id, m.to_user_id, m.subject, m.message, m.is_read, m.created_at,
                    CASE 
                        WHEN m.from_user_id = ? THEN 'sent'
                        ELSE 'received'
                    END as message_type,
+                   'message' as source_type,
                    sender.fullname as sender_name,
                    receiver.fullname as receiver_name
             FROM user_messages m 
             LEFT JOIN users sender ON m.from_user_id = sender.user_id 
             LEFT JOIN users receiver ON m.to_user_id = receiver.user_id 
-            WHERE (m.to_user_id = ? OR m.from_user_id = ?)
-            ORDER BY m.created_at DESC
-        ");
-        $stmt->execute([$user['user_id'], $user['user_id'], $user['user_id']]);
-        $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            WHERE " . implode(" AND ", $where_messages) . "
+        ";
         
-        // Debug: Log message count
-        error_log("Messages page: Found " . count($messages) . " messages for user " . $user['user_id']);
+        $final_params = array_merge([$user['user_id']], $params_messages);
         
-        // Debug: Log first message if any exist
-        if (!empty($messages)) {
-            error_log("First message: " . json_encode($messages[0]));
+        if ($has_notifications && (!$filter_sender || $filter_sender === 'System')) {
+            $query .= "
+                UNION ALL
+                SELECT n.id, 0 as from_user_id, n.user_id as to_user_id, n.title as subject, n.message, n.is_read, n.created_at,
+                       'received' as message_type,
+                       'notification' as source_type,
+                       'System' as sender_name,
+                       u.fullname as receiver_name
+                FROM notifications n
+                JOIN users u ON n.user_id = u.user_id
+                WHERE " . implode(" AND ", $where_notif) . "
+            ";
+            $final_params = array_merge($final_params, $params_notif);
         }
-    } else {
-        error_log("user_messages table does not exist");
-        // Create the table if it doesn't exist
-        $pdo->exec("CREATE TABLE IF NOT EXISTS user_messages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            from_user_id INT NOT NULL,
-            to_user_id INT NOT NULL,
-            subject VARCHAR(255) NOT NULL,
-            message TEXT NOT NULL,
-            is_read TINYINT DEFAULT 0,
-            is_private TINYINT DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (from_user_id) REFERENCES users(user_id),
-            FOREIGN KEY (to_user_id) REFERENCES users(user_id)
-        )");
-        error_log("Created user_messages table");
+        
+        $query .= " ORDER BY created_at DESC";
+        
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($final_params);
+        $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (Exception $e) {
-    error_log("Error fetching messages: " . $e->getMessage());
+    error_log("Error fetching messages and notifications: " . $e->getMessage());
 }
 
-// Count unread messages (all messages for this user)
+// Get list of potential senders from flow chain (HOD, HRM, Auditor, Finance, CEO)
+$flow_senders = [];
+try {
+    $stmt = $pdo->prepare("SELECT fullname FROM users WHERE role_id IN (2, 3, 4, 5, 6)");
+    $stmt->execute();
+    $flow_senders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    error_log("Error fetching flow senders: " . $e->getMessage());
+}
+
+// Count unread (both messages and notifications)
 $unread_count = 0;
 try {
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM user_messages WHERE to_user_id = ? AND is_read = 0");
-    $stmt->execute([$user['user_id']]);
-    $unread_count = (int)$stmt->fetchColumn();
+    $unread_msg = 0;
+    if ($has_messages) {
+        $st = $pdo->prepare("SELECT COUNT(*) FROM user_messages WHERE to_user_id = ? AND is_read = 0");
+        $st->execute([$user['user_id']]);
+        $unread_msg = (int)$st->fetchColumn();
+    }
+    
+    $unread_notif = 0;
+    if ($has_notifications) {
+        $st = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+        $st->execute([$user['user_id']]);
+        $unread_notif = (int)$st->fetchColumn();
+    }
+    
+    $unread_count = $unread_msg + $unread_notif;
 } catch (Exception $e) {
-    error_log("Error counting unread messages: " . $e->getMessage());
+    error_log("Error counting unread: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -157,7 +231,7 @@ try {
     <?php include __DIR__ . '/sidebar.php'; ?>
     
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col ml-64">
         <!-- Top Nav -->
         <header class="glass header-pulse shadow p-4 flex items-center justify-between sticky top-0 z-40">
             <h1 class="text-2xl font-bold title-gradient">Messages</h1>
@@ -199,6 +273,55 @@ try {
                         Total: <?= count($messages) ?> | Unread: <?= $unread_count ?>
                     </div>
                 </div>
+
+                <!-- Filters -->
+                <form action="index.php" method="GET" class="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <input type="hidden" name="action" value="messages">
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                        <input type="date" name="date" value="<?= htmlspecialchars($filter_date) ?>" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Month</label>
+                        <select name="month" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Months</option>
+                            <?php for($m=1; $m<=12; $m++): ?>
+                                <option value="<?= $m ?>" <?= $filter_month == $m ? 'selected' : '' ?>><?= date('F', mktime(0,0,0,$m,1)) ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Year</label>
+                        <select name="year" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Years</option>
+                            <?php 
+                                $currentYear = date('Y');
+                                for($y=$currentYear; $y>=$currentYear-5; $y--): 
+                            ?>
+                                <option value="<?= $y ?>" <?= $filter_year == $y ? 'selected' : '' ?>><?= $y ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sender</label>
+                        <select name="sender" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Senders</option>
+                            <option value="System" <?= $filter_sender === 'System' ? 'selected' : '' ?>>System</option>
+                            <?php foreach($flow_senders as $sender): ?>
+                                <option value="<?= htmlspecialchars($sender) ?>" <?= $filter_sender === $sender ? 'selected' : '' ?>><?= htmlspecialchars($sender) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="flex items-end gap-2">
+                        <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors">Filter</button>
+                        <a href="index.php?action=messages" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Clear</a>
+                    </div>
+                </form>
                 
                 <!-- Debug Info -->
                 <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -218,8 +341,11 @@ try {
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
                                     <h3 class="font-bold text-lg text-gray-900"><?= htmlspecialchars($message['subject']) ?></h3>
+                                    <?php if ($message['source_type'] === 'notification'): ?>
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 uppercase tracking-wider">Notification</span>
+                                    <?php endif; ?>
                                     <?php if (!$message['is_read']): ?>
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">NEW</span>
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 uppercase tracking-wider">NEW</span>
                                     <?php endif; ?>
                                 </div>
                                 <div class="text-sm text-gray-500 mb-3">
@@ -249,18 +375,22 @@ try {
                                 <form method="POST" style="display: inline;">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="message_id" value="<?= $message['id'] ?>">
-                                    <button type="submit" name="mark_read" class="btn btn-primary btn-sm">
-                                        ✓ Mark Read
+                                    <input type="hidden" name="source_type" value="<?= $message['source_type'] ?>">
+                                    <button type="submit" name="mark_read" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Mark as Read">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
                                     </button>
                                 </form>
                                 <?php endif; ?>
-                                <form method="POST" style="display: inline;">
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this message?');">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="message_id" value="<?= $message['id'] ?>">
-                                    <button type="submit" name="delete_message" 
-                                            onclick="return confirm('Are you sure you want to delete this <?= $message['message_type'] === 'sent' ? 'sent' : 'received' ?> message?')"
-                                            class="btn btn-danger btn-sm">
-                                        🗑️ Delete
+                                    <input type="hidden" name="source_type" value="<?= $message['source_type'] ?>">
+                                    <button type="submit" name="delete_message" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                     </button>
                                 </form>
                             </div>

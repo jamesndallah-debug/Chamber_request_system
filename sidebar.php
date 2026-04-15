@@ -55,17 +55,37 @@ $isActive = function($actions) use ($current_action) {
             <span>Request History</span>
         </a>
         
-        <a href="index.php?action=messages" class="flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors
+        <a href="index.php?action=messages" class="flex items-center justify-between px-4 py-2 rounded-lg transition-colors
             <?= $current_action === 'messages' ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0l7.89-5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <span>Messages</span>
+            <div class="flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0l7.89-5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>Messages</span>
+            </div>
+            <?php 
+                $unread_count_sidebar = 0;
+                try {
+                    $st1 = $pdo->prepare("SELECT COUNT(*) FROM user_messages WHERE to_user_id = ? AND is_read = 0");
+                    $st1->execute([$user['user_id']]);
+                    $unread_count_sidebar += (int)$st1->fetchColumn();
+                    
+                    $st2 = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+                    $st2->execute([$user['user_id']]);
+                    $unread_count_sidebar += (int)$st2->fetchColumn();
+                } catch (Exception $e) { /* ignore */ }
+                
+                if ($unread_count_sidebar > 0): 
+            ?>
+            <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <?= $unread_count_sidebar ?>
+            </span>
+            <?php endif; ?>
         </a>
         
         <?php if (in_array($user['role_id'], [7])): // Only show settings link to Admin ?>
-        <a href="index.php?action=settings" class="flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors
-            <?= $current_action === 'settings' ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700' ?>">
+        <a href="index.php?action=admin_management&tab=settings" class="flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors
+            <?= ($current_action === 'admin_management' && ($_GET['tab'] ?? '') === 'settings') ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700' ?>">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37A1.724 1.724 0 001.518 4.657a1.724 1.724 0 00-1.066 2.573c-.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 3.572-1.066.756-3.35.756-3.35 0-1.756-2.924-1.756z" />
             </svg>
@@ -74,7 +94,7 @@ $isActive = function($actions) use ($current_action) {
         <?php endif; ?>
         
         <div class="border-t border-gray-100 pt-6 mt-auto">
-            <a href="index.php?action=logout" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100 shadow-sm hover:shadow-md">
+            <a href="index.php?action=logout" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

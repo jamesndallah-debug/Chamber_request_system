@@ -710,13 +710,13 @@ try {
         <!-- Top Nav -->
         <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 left-64 right-0 z-40 bg-white/80">
             <div class="flex items-center gap-4">
-                <a id="back-to-dashboard-btn" href="index.php?action=dashboard" class="hidden items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" style="display: none;">
+                <a href="index.php?action=dashboard" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-blue-600 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span>Back to Dashboard</span>
+                    <span class="font-medium">Back</span>
                 </a>
-                <h1 class="text-3xl font-bold title-gradient">Admin Management Dashboard</h1>
+                <h1 class="text-3xl font-bold title-gradient">Admin Management</h1>
             </div>
             <div class="flex items-center space-x-4">
                 <p class="text-gray-700">

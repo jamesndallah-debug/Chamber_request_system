@@ -386,16 +386,23 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- <div class="bg-orb"></div>Added third orb for better background effect -->
     <?php include __DIR__ . '/sidebar.php'; ?>
 
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col ml-64">
         <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-5 flex items-center justify-between text-gray-800 shadow-sm">
-            <h1 class="text-2xl font-semibold flex items-center gap-3">
-                <span class="flex items-center gap-2">
-                    <span class="text-brand-gold">Request #<?= e($request['request_id']) ?></span>
-                </span>
-                <span class="chip bg-gray-100 border-gray-200"><span class="text-xl"><?= e($typeEmoji) ?></span><span><?= e($type) ?></span></span>
-            </h1>
+            <div class="flex items-center gap-4">
+                <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span class="font-medium">Back</span>
+                </a>
+                <h1 class="text-2xl font-semibold flex items-center gap-3">
+                    <span class="flex items-center gap-2">
+                        <span class="text-brand-gold">Request #<?= e($request['request_id']) ?></span>
+                    </span>
+                    <span class="chip bg-gray-100 border-gray-200"><span class="text-xl"><?= e($typeEmoji) ?></span><span><?= e($type) ?></span></span>
+                </h1>
+            </div>
             <div class="no-print flex items-center gap-4">
-                <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"><span>←</span> Back to Dashboard</a>
                 <?php if ($request['user_id'] == $user['user_id'] && strtolower($request['status_name']) === 'rejected'): ?>
                 <a href="index.php?action=edit_request&id=<?= e($request['request_id']) ?>" class="btn btn-primary btn-sm shadow-md hover:shadow-lg transition-all">✏️ Edit Request</a>
                 <?php endif; ?>
