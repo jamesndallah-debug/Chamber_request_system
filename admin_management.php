@@ -643,7 +643,7 @@ try {
                 display: none !important;
             }
         }
-    </style>
+        
         .bg-app {
             background-color: #f8fafc;
         }
@@ -782,7 +782,7 @@ try {
                     <div class="mb-4 flex gap-3">
                         <button class="btn btn-primary" onclick="showCreateUser()">➕ Add New User</button>
                         <a href="test_admin.php" class="btn btn-secondary" target="_blank">🧪 Run Tests</a>
-                </div>
+                    </div>
                 
                 <div id="createUserForm" class="glass p-6 rounded-lg mb-6" style="display: none;">
                     <h3 class="text-xl font-bold mb-4 text-gray-800">Create New User</h3>
@@ -2421,7 +2421,7 @@ try {
 </main>
 </div>
 
-<!-- Message Modal -->
+<!-- Modals -->
 <div id="messageModal" class="modal">
     <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
         <div class="flex items-center justify-between mb-4">
@@ -2442,12 +2442,6 @@ try {
                 <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
                 <textarea name="message_content" required rows="4" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-sm" placeholder="Type your private message here..."></textarea>
             </div>
-            <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p class="text-yellow-800 text-sm">
-                    <strong>🔒 Private Message Notice:</strong><br>
-                    This message will be sent privately to the selected user only. Other users cannot see or reply to this message.
-                </p>
-            </div>
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="closeMessageModal()" class="btn btn-secondary">Cancel</button>
                 <button type="submit" name="admin_send_message" class="btn btn-primary">Send Message</button>
@@ -2456,238 +2450,116 @@ try {
     </div>
 </div>
 
-<!-- Loading Modal -->
 <div id="loadingModal" class="modal">
-    <div class="modal-card p-8 text-center bg-white rounded-xl shadow-2xl border border-gray-200">
+    <div class="modal-card p-8 text-center bg-white rounded-xl shadow-2xl">
         <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <h3 class="text-xl font-bold text-gray-800 mb-2">Processing...</h3>
-        <p id="loadingMessage" class="text-gray-600">Please wait while we process your request.</p>
+        <p id="loadingMessage" class="text-gray-600">Please wait...</p>
     </div>
 </div>
 
-<!-- Database Restore Modal -->
 <div id="restoreModal" class="modal">
-    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
+    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-800">🔄 Restore Database</h3>
-            <button onclick="closeRestoreModal()" class="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
-        </div>
-        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-red-700 text-sm">
-                <strong>⚠️ Warning:</strong><br>
-                Restoring a database backup will overwrite all current data. This action cannot be undone. Please ensure you have a recent backup before proceeding.
-            </p>
+            <h3 class="text-xl font-bold text-gray-800">Restore Database</h3>
+            <button onclick="closeRestoreModal()" class="text-gray-400 hover:text-gray-600">✕</button>
         </div>
         <form onsubmit="return handleRestore(event)">
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Select Backup File</label>
-                <input type="file" accept=".sql,.zip" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all shadow-sm">
-            </div>
-            <div class="mb-4">
-                <label class="flex items-center gap-2 text-gray-700">
-                    <input type="checkbox" required class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                    <span class="text-sm">I understand this will overwrite all current data</span>
-                </label>
-            </div>
+            <input type="file" accept=".sql" class="w-full mb-4">
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="closeRestoreModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" class="btn btn-danger">Restore Database</button>
+                <button type="submit" class="btn btn-danger">Restore</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="addDirectorateModal" class="modal">
+    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Add Directorate</h3>
+            <button onclick="closeAddDirectorateModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <form method="POST" action="index.php?action=admin_management">
+            <?= csrf_field() ?>
+            <input type="text" name="directorate_name" required class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="Directorate Name">
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeAddDirectorateModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" name="add_directorate" class="btn btn-primary">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="addRoleModal" class="modal">
+    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Add Role</h3>
+            <button onclick="closeAddRoleModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <form method="POST" action="index.php?action=admin_management">
+            <?= csrf_field() ?>
+            <input type="text" name="role_name" required class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="Role Name">
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeAddRoleModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" name="add_role" class="btn btn-primary">Add</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-// Unified tab switching with sidebar management
 function showTab(tabName) {
-    // Hide all tab contents
-    const contents = document.querySelectorAll('.tab-content');
-    contents.forEach(content => {
-        content.classList.remove('active');
-        content.style.display = 'none';
-    });
-    
-    // Update tab button styles (top row buttons with class "tab")
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
+    document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
         tab.classList.add('border-transparent', 'text-gray-500');
     });
     
-    // Show selected tab content
     const selectedTab = document.getElementById(tabName);
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-        selectedTab.style.display = 'block';
-    }
+    if (selectedTab) selectedTab.style.display = 'block';
     
-    // Mark the corresponding button as active
-    const activeButton = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
-    if (activeButton) {
-        activeButton.classList.remove('border-transparent', 'text-gray-500');
-        activeButton.classList.add('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
+    const btn = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
+    if (btn) {
+        btn.classList.remove('border-transparent', 'text-gray-500');
+        btn.classList.add('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
     }
-    
-    // Sidebar visibility and layout adjustments
-    const sidebarContainer = document.getElementById('sidebar-container');
-    const mainContent = document.getElementById('main-content');
-    const backButton = document.getElementById('back-to-dashboard-btn');
-    if (tabName === 'analytics' || tabName === 'settings' || tabName === 'my_requests') {
-        if (sidebarContainer) sidebarContainer.style.display = 'none';
-        if (mainContent) mainContent.style.marginLeft = '0';
-        // Show back button for my_requests tab
-        if (tabName === 'my_requests' && backButton) {
-            backButton.style.display = 'flex';
-        } else if (backButton) {
-            backButton.style.display = 'none';
-        }
+
+    const sidebar = document.getElementById('sidebar-container');
+    const main = document.getElementById('main-content');
+    if (['analytics', 'settings', 'my_requests'].includes(tabName)) {
+        if (sidebar) sidebar.style.display = 'none';
+        if (main) main.style.marginLeft = '0';
     } else {
-        if (sidebarContainer) sidebarContainer.style.display = 'block';
-        if (mainContent) mainContent.style.marginLeft = '16rem'; // ml-64
-        if (backButton) backButton.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'block';
+        if (main) main.style.marginLeft = '16rem';
     }
 }
 
-// Initialize default tab to Users and wire up My Requests search
-document.addEventListener('DOMContentLoaded', function() {
-    const params = new URLSearchParams(window.location.search);
-    const initialTab = params.get('tab');
-    showTab(initialTab && ['users','requests','my_requests','analytics','settings'].includes(initialTab) ? initialTab : 'users');
+function showCreateUser() { document.getElementById('createUserForm').style.display = 'block'; }
+function hideCreateUser() { document.getElementById('createUserForm').style.display = 'none'; }
+function sendMessageToUser(id, name) {
+    document.getElementById('messageUserId').value = id;
+    document.getElementById('messageUserName').textContent = name;
+    document.getElementById('messageModal').classList.add('show');
+}
+function closeMessageModal() { document.getElementById('messageModal').classList.remove('show'); }
+function showAddDirectorateModal() { document.getElementById('addDirectorateModal').classList.add('show'); }
+function closeAddDirectorateModal() { document.getElementById('addDirectorateModal').classList.remove('show'); }
+function showAddRoleModal() { document.getElementById('addRoleModal').classList.add('show'); }
+function closeAddRoleModal() { document.getElementById('addRoleModal').classList.remove('show'); }
+function showRestoreModal() { document.getElementById('restoreModal').classList.add('show'); }
+function closeRestoreModal() { document.getElementById('restoreModal').classList.remove('show'); }
 
-    const myAdminRequestSearch = document.getElementById('myAdminRequestSearch');
-    const myAdminRequestsContainer = document.getElementById('myAdminRequestsContainer');
-    
-    if (myAdminRequestSearch && myAdminRequestsContainer) {
-        myAdminRequestSearch.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-            const requests = myAdminRequestsContainer.querySelectorAll('.card-req');
-            
-            requests.forEach(request => {
-                const searchContent = (request.getAttribute('data-search-content') || '').toLowerCase();
-                if (!searchTerm || searchContent.includes(searchTerm)) {
-                    request.style.display = 'block';
-                } else {
-                    request.style.display = 'none';
-                }
-            });
-            
-            const visibleRequests = Array.from(requests).filter(req => req.style.display !== 'none');
-            let noResultsMsg = myAdminRequestsContainer.querySelector('.no-results');
-            
-            if (visibleRequests.length === 0 && searchTerm !== '') {
-                if (!noResultsMsg) {
-                    noResultsMsg = document.createElement('div');
-                    noResultsMsg.className = 'no-results text-center text-gray-500 py-10';
-                    noResultsMsg.innerHTML = `
-                        <p class="text-lg">🔍 No requests found</p>
-                        <p class="mt-2 text-sm text-gray-400">No requests match your search criteria.</p>
-                    `;
-                    myAdminRequestsContainer.appendChild(noResultsMsg);
-                }
-                noResultsMsg.style.display = 'block';
-            } else if (noResultsMsg) {
-                noResultsMsg.style.display = 'none';
-            }
-        });
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    showTab(params.get('tab') || 'users');
 });
 </script>
-
-<!-- Mobile Menu JavaScript -->
-<script src="assets/mobile-menu.js"></script>
-
 <style>
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:60; }
     .modal.show { display:flex; }
-    .modal-card { background: #ffffff; border:1px solid rgba(0,0,0,.1); color:#1f2937; border-radius: 12px; width: 90%; max-width: 520px; box-shadow: 0 24px 64px rgba(0,0,0,.2); }
-    .marquee { white-space: nowrap; overflow: hidden; }
-    .marquee > span { display:inline-block; padding-left:100%; animation: marquee 30s linear infinite; }
-    @keyframes marquee { 0% { transform: translateX(100%);} 100% { transform: translateX(-100%);} }
-    
-    /* Enhanced scrolling styles */
-    .smooth-scroll {
-        scroll-behavior: smooth;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
-    }
-    
-    .smooth-scroll::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .smooth-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    
-    .smooth-scroll::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, 0.3);
-        border-radius: 4px;
-    }
-    
-    .smooth-scroll::-webkit-scrollbar-thumb:hover {
-        background: rgba(148, 163, 184, 0.5);
-    }
-    
-    /* Back button animations */
-    .back-button {
-        backdrop-filter: blur(12px);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .back-button:hover {
-        transform: translateX(-2px) scale(1.05);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    }
-</div>
-</div>
-
-<!-- Add Directorate Modal -->
-<div id="addDirectorateModal" class="modal">
-    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-800">Add New Directorate</h3>
-            <button onclick="closeAddDirectorateModal()" class="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
-        </div>
-        <form method="POST" action="index.php?action=admin_management">
-            <?= csrf_field() ?>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Directorate Name</label>
-                <input
-                    type="text"
-                    name="directorate_name"
-                    required
-                    class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-sm"
-                    placeholder="Enter directorate name"
-                >
-            </div>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeAddDirectorateModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" name="add_directorate" class="btn btn-primary">Add Directorate</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Add Role Modal -->
-<div id="addRoleModal" class="modal">
-    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-800">Add New Role</h3>
-            <button onclick="closeAddRoleModal()" class="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
-        </div>
-        <form method="POST" action="index.php?action=admin_management">
-            <?= csrf_field() ?>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Role Name</label>
-                <input type="text" name="role_name" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-sm" placeholder="Enter role name">
-            </div>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeAddRoleModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" name="add_role" class="btn btn-primary">Add Role</button>
-            </div>
-        </form>
-    </div>
-</div>
-
+    .modal-card { width: 90%; max-width: 500px; }
+</style>
 </body>
 </html>
