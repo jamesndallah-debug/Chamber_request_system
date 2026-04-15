@@ -396,6 +396,9 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </h1>
             <div class="no-print flex items-center gap-4">
                 <a href="index.php?action=dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"><span>←</span> Back to Dashboard</a>
+                <?php if ($request['user_id'] == $user['user_id'] && strtolower($request['status_name']) === 'rejected'): ?>
+                <a href="index.php?action=edit_request&id=<?= e($request['request_id']) ?>" class="btn btn-primary btn-sm shadow-md hover:shadow-lg transition-all">✏️ Edit Request</a>
+                <?php endif; ?>
                 <?php $isAdmin = ((int)$user['role_id'] === 7); ?>
                 <?php if ($isAdmin): ?>
                 <form method="POST" action="index.php?action=delete_request" onsubmit="return confirm('Delete this request permanently? This cannot be undone.');">

@@ -73,12 +73,19 @@ $isActive = function($actions) use ($current_action) {
         </a>
         <?php endif; ?>
         
-        <div class="border-t border-gray-200 pt-4 mt-6">
-            <a href="index.php?action=logout" class="flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors hover:bg-red-50 text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H9a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2H9m-6 0V9a2 2 0 012-2h2a2 2 0 012 2V6a2 2 0 01-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2H9m-6 0V9a2 2 0 012-2h2a2 2 0 012 2V6a2 2 0 01-2-2H5a2 2 0 00-2 2V6a2 2 0 002 2H9z" />
+        <div class="border-t border-gray-100 pt-6 mt-auto">
+            <a href="index.php?action=logout" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 hover:bg-red-50 text-red-600 border border-transparent hover:border-red-100 shadow-sm hover:shadow-md">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H9m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h6a3 3 0 013 3v1" />
+                        </svg>
+                    </div>
+                    <span class="font-bold tracking-wide">Sign Out</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
-                <span>Logout</span>
             </a>
         </div>
     </nav>

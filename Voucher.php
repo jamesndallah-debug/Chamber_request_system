@@ -193,20 +193,26 @@ class VoucherModel {
                 // Get voucher details
                 $voucher = $this->get_voucher_by_id($voucher_id);
                 if ($voucher) {
-                    // Notify CEO about the voucher that needs approval
-                    $ed_user_id = get_ed_user_id($this->pdo);
-                    if ($ed_user_id) {
-                        $title = ($voucher['voucher_type'] == 'petty_cash' ? 'Petty Cash' : 'Payment') . ' Voucher Ready for Final Approval';
-                        $message = 'Voucher (PV No: ' . $voucher['pv_no'] . ') has been approved by Finance and is now ready for your final approval.';
-                        create_voucher_notification($this->pdo, $ed_user_id, $title, $message, $voucher_id);
-                        
-                        // Add a message from Finance to CEO
-                        $this->add_voucher_message(
-                            $voucher_id,
-                            $voucher['prepared_by'], // Use the original creator (Finance user)
-                            $ed_user_id,
-                            'This voucher has been reviewed and approved by Finance. It is now ready for your final approval.'
-                        );
+                    // If it's a petty cash voucher, Finance approval can be final
+                    if ($voucher['voucher_type'] == 'petty_cash') {
+                        // Automatically approve at ED level too
+                        $this->pdo->prepare("UPDATE vouchers SET ed_status = 'approved', ed_approved_at = CURRENT_TIMESTAMP, ed_remark = 'Auto-approved by Finance for Petty Cash' WHERE voucher_id = ?")->execute([$voucher_id]);
+                    } else {
+                        // Notify CEO about the voucher that needs approval
+                        $ed_user_id = get_ed_user_id($this->pdo);
+                        if ($ed_user_id) {
+                            $title = 'Payment Voucher Ready for Final Approval';
+                            $message = 'Voucher (PV No: ' . $voucher['pv_no'] . ') has been approved by Finance and is now ready for your final approval.';
+                            create_voucher_notification($this->pdo, $ed_user_id, $title, $message, $voucher_id);
+                            
+                            // Add a message from Finance to CEO
+                            $this->add_voucher_message(
+                                $voucher_id,
+                                $voucher['prepared_by'], // Use the original creator (Finance user)
+                                $ed_user_id,
+                                'This voucher has been reviewed and approved by Finance. It is now ready for your final approval.'
+                            );
+                        }
                     }
                 }
             }

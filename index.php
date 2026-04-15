@@ -265,7 +265,7 @@ switch ($action) {
     case 'check_notifications':
         if ($user) {
             try {
-                // Auto-generate reminders for Imprest requests when Retirement is not submitted within 7/14 days
+                // Auto-generate reminders for Imprest requests when Retirement is not submitted within 5/7 days
                 $uid = (int)$user['user_id'];
                 try {
                     $stmtImp = $pdo->prepare("SELECT request_id, created_at FROM requests WHERE user_id = ? AND request_type = 'Imprest request' AND created_at <= DATE_SUB(NOW(), INTERVAL 5 DAY)");
@@ -280,23 +280,14 @@ switch ($action) {
                         $stmtRet->execute([$uid, $createdAt]);
                         $hasRetirement = ((int)$stmtRet->fetchColumn() > 0);
                         if ($hasRetirement) { continue; }
-                        if ($ageDays >= 14) {
-                            // 14-day warning
+                        if ($ageDays >= 7) {
+                            // 7-day warning
                             $chk = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND request_id = ? AND title = 'Imprest Deduction Warning'");
                             $chk->execute([$uid, $rid]);
                             if ((int)$chk->fetchColumn() === 0) {
                                 $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
-                                $msg = "More than 14 days have passed since your Imprest request without a Retirement submission. The imprest amount will be deducted from your salary if not retired immediately.";
+                                $msg = "More than 7 days have passed since your Imprest request without a Retirement submission. The imprest amount will be deducted from your salary if not retired immediately.";
                                 $ins->execute([$uid, 'Imprest Deduction Warning', $msg, $rid]);
-                            }
-                        } else if ($ageDays >= 7) {
-                            // 7-day reminder
-                            $chk = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND request_id = ? AND title = 'Imprest Retirement Reminder'");
-                            $chk->execute([$uid, $rid]);
-                            if ((int)$chk->fetchColumn() === 0) {
-                                $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
-                                $msg = "It's been 7 days since your Imprest request. Please submit the Retirement request.";
-                                $ins->execute([$uid, 'Imprest Retirement Reminder', $msg, $rid]);
                             }
                         } else if ($ageDays >= 5) {
                             // 5-day early reminder
@@ -417,6 +408,15 @@ switch ($action) {
                 $hide_sidebar = true;
             }
             include __DIR__ . '/dashboard.php';
+            break;
+        }
+        header('Location: index.php?action=login');
+        exit;
+
+    case 'request_history':
+        if ($user) {
+            $requests = $requestModel->get_my_requests((int)$user['user_id']);
+            include __DIR__ . '/request_history.php';
             break;
         }
         header('Location: index.php?action=login');
@@ -738,6 +738,145 @@ switch ($action) {
             }
         }
         include __DIR__ . '/new_request.php';
+        break;
+
+    case 'edit_request':
+        if (!isset($_GET['id'])) {
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+        $rid = (int)$_GET['id'];
+        $request = $requestModel->get_request_by_id($rid);
+        if (!$request || (int)$request['user_id'] !== (int)$user['user_id'] || strtolower($request['status_name']) !== 'rejected') {
+            header('Location: index.php?action=dashboard');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            require_csrf_post();
+            $details_json = $_POST['details_json'] ?? '';
+            $request_type = $_POST['request_type'] ?? '';
+            
+            // Re-validate just like new_request
+            $days = (int)($_POST['days_applied'] ?? 0);
+            if (in_array($request_type, ['Annual leave','Compassionate leave','Paternity leave','Maternity leave'], true)) {
+                if ($request_type !== 'Sick leave') {
+                    $available = null;
+                    try {
+                        $stmt = $pdo->prepare("SELECT balance_days FROM leave_balances WHERE user_id = ? AND leave_type = ? AND year = ?");
+                        $stmt->execute([(int)$user['user_id'], $request_type, (int)date('Y')]);
+                        $val = $stmt->fetchColumn();
+                        if ($val !== false) { $available = (int)$val; }
+                    } catch (Throwable $e) { /* ignore */ }
+                    if ($available === null) {
+                        $fallbackCaps = ['Annual leave'=>28, 'Compassionate leave'=>7, 'Paternity leave'=>3, 'Maternity leave'=>84];
+                        $available = $fallbackCaps[$request_type] ?? 0;
+                    }
+                    if ($days <= 0 || $days > $available) {
+                        $error = "Days applied must be between 1 and " . $available . ".";
+                    }
+                }
+            }
+
+            if (!isset($error)) {
+                $request_data = [
+                    'request_type' => $request_type,
+                    'title' => $_POST['title'] ?? '',
+                    'description' => $_POST['description'] ?? '',
+                    'amount' => $_POST['amount'] ?? null,
+                    'details_json' => $details_json ?: null
+                ];
+
+                // Handle attachment
+                if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+                    $file_name = $_FILES['attachment']['name'];
+                    $file_tmp = $_FILES['attachment']['tmp_name'];
+                    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                    $allowed_extensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
+                    if (in_array($file_ext, $allowed_extensions)) {
+                        $new_file_name = uniqid('req_') . '.' . $file_ext;
+                        if (move_uploaded_file($file_tmp, UPLOAD_PATH . $new_file_name)) {
+                            $request_data['attachment_path'] = $new_file_name;
+                        }
+                    }
+                }
+
+                // Update database
+                $fields = [];
+                $params = [];
+                foreach ($request_data as $k => $v) {
+                    $fields[] = "$k = ?";
+                    $params[] = $v;
+                }
+                // Reset approval statuses and main status to Pending (status_id = 1)
+                $fields[] = "status_id = 1";
+                $fields[] = "hod_status = 'pending'";
+                $fields[] = "hrm_status = 'pending'";
+                $fields[] = "auditor_status = 'pending'";
+                $fields[] = "finance_status = 'pending'";
+                $fields[] = "ed_status = 'pending'";
+                $fields[] = "hod_remark = NULL, hrm_remark = NULL, auditor_remark = NULL, finance_remark = NULL, ed_remark = NULL";
+                $fields[] = "hod_approved_at = NULL, hrm_approved_at = NULL, auditor_approved_at = NULL, finance_approved_at = NULL, ed_approved_at = NULL";
+
+                $sql = "UPDATE requests SET " . implode(', ', $fields) . " WHERE request_id = ?";
+                $params[] = $rid;
+                $stmt = $pdo->prepare($sql);
+                $result = $stmt->execute($params);
+
+                if ($result) {
+                    // Re-run workflow routing
+                    try {
+                        $userRole = (int)$user['role_id'];
+                        $userDept = $user['department'] ?? '';
+                        $type = $request_type;
+                        $lastId = $rid;
+                        
+                        // Copy-pasted workflow routing from new_request case
+                        if ($type === 'Retirement' || $type === 'TNCC retirement request') {
+                            $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                            $stmt->execute([$lastId]);
+                        } else if ($type === 'Salary advance') {
+                            switch ($userRole) {
+                                case 2: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                case 5: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?"); break;
+                                case 6: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                case 3: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                case 4: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                default: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                            }
+                            $stmt->execute([$lastId]);
+                        } else {
+                            switch ($userRole) {
+                                case 1:
+                                    $norm = strtolower(preg_replace('/[^a-z]/i', '', (string)$userDept));
+                                    if (in_array($norm, ['hr', 'humanresources', 'hrandadministration', 'hradministration', 'hradmin', 'hrandadmin'], true)) {
+                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    } else if (in_array($norm, ['finance', 'financemanager', 'financeofficer'], true)) {
+                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    } else if (in_array($norm, ['internalauditor', 'audit', 'internalaudit'], true)) {
+                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                    } else {
+                                        // Default: all pending (already set by UPDATE above)
+                                    }
+                                    if (isset($stmt)) $stmt->execute([$lastId]);
+                                    break;
+                                case 2: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                case 3: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                case 4: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                case 5: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                case 6: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                case 7: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                            }
+                        }
+                    } catch (Throwable $e) {}
+                    header('Location: index.php?action=view_request&id=' . $rid);
+                    exit;
+                } else {
+                    $error = "Failed to update request.";
+                }
+            }
+        }
+        include __DIR__ . '/edit_request.php';
         break;
 
     case 'view_request':

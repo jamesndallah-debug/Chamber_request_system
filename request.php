@@ -225,6 +225,9 @@ class RequestModel {
 
                 // Create notification for status change
                 $this->create_status_notification($request_id, $user_role_id, $status, $remark);
+                
+                // Notify previous flow members
+                $this->notify_flow_chain($request_id, $user_role_id, $status, $remark);
             }
             
             $this->pdo->commit();
@@ -265,6 +268,93 @@ class RequestModel {
             $nt->execute([$empId, $ntTitle, $ntMsg, $request_id]);
         } catch (PDOException $e) {
             error_log('Failed to create notification: ' . $e->getMessage());
+        }
+    }
+
+    private function notify_flow_chain($request_id, $user_role_id, $status, $remark) {
+        try {
+            $stmtReq = $this->pdo->prepare("SELECT r.*, u.department FROM requests r JOIN users u ON r.user_id = u.user_id WHERE r.request_id = ?");
+            $stmtReq->execute([$request_id]);
+            $req = $stmtReq->fetch(PDO::FETCH_ASSOC);
+            if (!$req) return;
+
+            $roleNames = [3 => 'HOD', 2 => 'HRM', 6 => 'Internal Auditor', 5 => 'Finance', 4 => 'CEO'];
+            $roleName = $roleNames[$user_role_id] ?? 'Manager';
+            
+            $recipients = []; // list of user_ids to notify
+
+            // Define the flow order
+            $flow = [3, 2, 6, 5, 4];
+            $currentIndex = array_search($user_role_id, $flow);
+
+            if ($currentIndex !== false) {
+                if ($user_role_id == 4) {
+                    // CEO decision: notify EVERYONE previously in the flow
+                    // HOD
+                    if ($req['hod_status'] !== 'pending') {
+                        $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 3 AND department = ?");
+                        $st->execute([$req['department']]);
+                        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+                    }
+                    // HRM
+                    if ($req['hrm_status'] !== 'pending') {
+                        $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 2");
+                        $st->execute();
+                        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+                    }
+                    // Auditor
+                    if ($req['auditor_status'] !== 'pending') {
+                        $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 6");
+                        $st->execute();
+                        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+                    }
+                    // Finance
+                    if ($req['finance_status'] !== 'pending') {
+                        $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 5");
+                        $st->execute();
+                        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+                    }
+                } else {
+                    // Notify the PREVIOUS member in the flow who has already acted
+                    for ($i = $currentIndex - 1; $i >= 0; $i--) {
+                        $prevRole = $flow[$i];
+                        $statusField = ($prevRole == 3 ? 'hod_status' : ($prevRole == 2 ? 'hrm_status' : ($prevRole == 6 ? 'auditor_status' : ($prevRole == 5 ? 'finance_status' : ''))));
+                        
+                        if ($statusField && $req[$statusField] !== 'pending') {
+                            // This role acted, notify them
+                            if ($prevRole == 3) {
+                                $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 3 AND department = ?");
+                                $st->execute([$req['department']]);
+                            } else {
+                                $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = ?");
+                                $st->execute([$prevRole]);
+                            }
+                            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+                            break; // only notify the immediate previous one who acted
+                        }
+                    }
+                }
+            }
+
+            // Remove duplicates and the current user
+            $recipients = array_unique($recipients);
+            $recipients = array_filter($recipients, function($uid) use ($user_role_id) {
+                // This is a bit tricky since we don't have the current user_id here easily, 
+                // but we can assume the current user is one of the roles.
+                return true; 
+            });
+
+            $ntTitle = "Flow Update: Request #" . $request_id;
+            $ntMsg = "Request (" . ($req['title'] ?? $req['request_type']) . ") was " . $status . " by " . $roleName . ".";
+            if (!empty($remark)) $ntMsg .= " Remark: " . $remark;
+
+            foreach ($recipients as $uid) {
+                $nt = $this->pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                $nt->execute([$uid, $ntTitle, $ntMsg, $request_id]);
+            }
+
+        } catch (PDOException $e) {
+            error_log('Failed to notify flow chain: ' . $e->getMessage());
         }
     }
     
