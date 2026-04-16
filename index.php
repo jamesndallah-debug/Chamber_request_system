@@ -808,15 +808,36 @@ switch ($action) {
                     $fields[] = "$k = ?";
                     $params[] = $v;
                 }
-                // Reset approval statuses and main status to Pending (status_id = 1)
-                $fields[] = "status_id = 1";
-                $fields[] = "hod_status = 'pending'";
-                $fields[] = "hrm_status = 'pending'";
-                $fields[] = "auditor_status = 'pending'";
-                $fields[] = "finance_status = 'pending'";
-                $fields[] = "ed_status = 'pending'";
-                $fields[] = "hod_remark = NULL, hrm_remark = NULL, auditor_remark = NULL, finance_remark = NULL, ed_remark = NULL";
-                $fields[] = "hod_approved_at = NULL, hrm_approved_at = NULL, auditor_approved_at = NULL, finance_approved_at = NULL, ed_approved_at = NULL";
+
+                // Smart resubmission logic: 
+                // If it was rejected, only reset the rejector's status and keep others.
+                // Otherwise (if it was pending), reset all.
+                $isRejected = ((int)$request['status_id'] === 3);
+                $fields[] = "status_id = 1"; // Back to pending
+
+                if ($isRejected) {
+                    $rejectorField = '';
+                    if ($request['hod_status'] === 'rejected') $rejectorField = 'hod';
+                    elseif ($request['hrm_status'] === 'rejected') $rejectorField = 'hrm';
+                    elseif ($request['auditor_status'] === 'rejected') $rejectorField = 'auditor';
+                    elseif ($request['finance_status'] === 'rejected') $rejectorField = 'finance';
+                    elseif ($request['ed_status'] === 'rejected') $rejectorField = 'ed';
+
+                    if ($rejectorField) {
+                        $fields[] = "{$rejectorField}_status = 'pending'";
+                        $fields[] = "{$rejectorField}_remark = NULL";
+                        $fields[] = "{$rejectorField}_approved_at = NULL";
+                    } else {
+                        // Fallback: reset all if we can't find who rejected it
+                        $fields[] = "hod_status = 'pending', hrm_status = 'pending', auditor_status = 'pending', finance_status = 'pending', ed_status = 'pending'";
+                        $fields[] = "hod_remark = NULL, hrm_remark = NULL, auditor_remark = NULL, finance_remark = NULL, ed_remark = NULL";
+                    }
+                } else {
+                    // Reset everything for non-rejected requests (editing while pending)
+                    $fields[] = "hod_status = 'pending', hrm_status = 'pending', auditor_status = 'pending', finance_status = 'pending', ed_status = 'pending'";
+                    $fields[] = "hod_remark = NULL, hrm_remark = NULL, auditor_remark = NULL, finance_remark = NULL, ed_remark = NULL";
+                    $fields[] = "hod_approved_at = NULL, hrm_approved_at = NULL, auditor_approved_at = NULL, finance_approved_at = NULL, ed_approved_at = NULL";
+                }
 
                 $sql = "UPDATE requests SET " . implode(', ', $fields) . " WHERE request_id = ?";
                 $params[] = $rid;
@@ -824,51 +845,59 @@ switch ($action) {
                 $result = $stmt->execute($params);
 
                 if ($result) {
-                    // Re-run workflow routing
-                    try {
-                        $userRole = (int)$user['role_id'];
-                        $userDept = $user['department'] ?? '';
-                        $type = $request_type;
-                        $lastId = $rid;
-                        
-                        // Copy-pasted workflow routing from new_request case
-                        if ($type === 'Retirement' || $type === 'TNCC retirement request') {
-                            $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                            $stmt->execute([$lastId]);
-                        } else if ($type === 'Salary advance') {
-                            switch ($userRole) {
-                                case 2: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
-                                case 5: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?"); break;
-                                case 6: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
-                                case 3: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
-                                case 4: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
-                                default: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                    // Only re-run workflow routing if it was NOT a rejected request
+                    // (because we want to preserve the progress for rejected requests)
+                    if (!$isRejected) {
+                        try {
+                            $userRole = (int)$user['role_id'];
+                            $userDept = $user['department'] ?? '';
+                            $type = $request_type;
+                            $lastId = $rid;
+                            
+                            if ($type === 'Retirement' || $type === 'TNCC retirement request') {
+                                $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                $stmt->execute([$lastId]);
+                            } else if ($type === 'Salary advance') {
+                                switch ($userRole) {
+                                    case 2: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                    case 5: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='approved', ed_status='pending' WHERE request_id = ?"); break;
+                                    case 6: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                    case 3: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                    case 4: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                    default: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); break;
+                                }
+                                $stmt->execute([$lastId]);
+                            } else {
+                                switch ($userRole) {
+                                    case 1:
+                                        $norm = strtolower(preg_replace('/[^a-z]/i', '', (string)$userDept));
+                                        if (in_array($norm, ['hr', 'humanresources', 'hrandadministration', 'hradministration', 'hradmin', 'hrandadmin'], true)) {
+                                            $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                        } else if (in_array($norm, ['finance', 'financemanager', 'financeofficer'], true)) {
+                                            $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                        } else if (in_array($norm, ['internalauditor', 'audit', 'internalaudit'], true)) {
+                                            $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
+                                        }
+                                        if (isset($stmt)) $stmt->execute([$lastId]);
+                                        break;
+                                    case 2: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                    case 3: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                    case 4: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                    case 5: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                    case 6: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                    case 7: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
+                                }
                             }
-                            $stmt->execute([$lastId]);
-                        } else {
-                            switch ($userRole) {
-                                case 1:
-                                    $norm = strtolower(preg_replace('/[^a-z]/i', '', (string)$userDept));
-                                    if (in_array($norm, ['hr', 'humanresources', 'hrandadministration', 'hradministration', 'hradmin', 'hrandadmin'], true)) {
-                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                                    } else if (in_array($norm, ['finance', 'financemanager', 'financeofficer'], true)) {
-                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                                    } else if (in_array($norm, ['internalauditor', 'audit', 'internalaudit'], true)) {
-                                        $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?");
-                                    } else {
-                                        // Default: all pending (already set by UPDATE above)
-                                    }
-                                    if (isset($stmt)) $stmt->execute([$lastId]);
-                                    break;
-                                case 2: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
-                                case 3: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
-                                case 4: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='approved', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
-                                case 5: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
-                                case 6: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='approved', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
-                                case 7: $stmt = $pdo->prepare("UPDATE requests SET hod_status='approved', hrm_status='pending', auditor_status='pending', finance_status='pending', ed_status='pending' WHERE request_id = ?"); $stmt->execute([$lastId]); break;
-                            }
-                        }
-                    } catch (Throwable $e) {}
+                        } catch (Throwable $e) {}
+                    }
+                    
+                    // Notify the rejector if it was a resubmission
+                    if ($isRejected) {
+                        try {
+                            $requestModel->notify_resubmission($rid);
+                        } catch (Throwable $e) {}
+                    }
+
                     header('Location: index.php?action=view_request&id=' . $rid);
                     exit;
                 } else {

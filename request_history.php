@@ -32,7 +32,7 @@
     <?php include __DIR__ . '/sidebar.php'; ?>
     
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col ml-64">
+    <div class="flex-1 flex flex-col ml-72">
         <!-- Top Nav -->
         <header class="glass shadow-sm p-6 flex items-center justify-between sticky top-0 z-40 bg-white/90">
             <h1 class="text-2xl font-bold text-gray-800">My Request History</h1>

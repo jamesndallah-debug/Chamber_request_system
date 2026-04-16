@@ -227,7 +227,7 @@ foreach ($vouchers as $voucher) {
     <!-- <div class="bg-orb"></div> -->
     <?php include __DIR__ . '/sidebar.php'; ?>
 
-    <div class="flex-1 flex flex-col ml-64">
+    <div class="flex-1 flex flex-col">
         <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40 p-6 flex items-center justify-between text-gray-800 shadow-sm">
             <h1 class="text-3xl font-semibold">Finance Dashboard</h1>
             <div class="flex items-center gap-4">

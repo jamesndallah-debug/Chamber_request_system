@@ -643,31 +643,187 @@ try {
                 display: none !important;
             }
         }
-        
+    </style>
+    <style>
         .bg-app {
             background-color: #f8fafc;
         }
-        /* .orb { position:absolute; border-radius:9999px; filter: blur(40px); opacity:.4; pointer-events:none; } */
-        /* .orb-blue { background:#0b5ed7; animation: floatY 9s ease-in-out infinite; } */
-        /* .orb-gold { background:#d4af37; animation: floatX 11s ease-in-out infinite; } */
-        /* .orb-green{ background:#16a34a; animation: floatXY 13s ease-in-out infinite; } */
+        .orb { position:absolute; border-radius:9999px; filter: blur(40px); opacity:.4; pointer-events:none; }
+        .orb-blue { background:#0b5ed7; animation: floatY 9s ease-in-out infinite; }
+        .orb-gold { background:#d4af37; animation: floatX 11s ease-in-out infinite; }
+        .orb-green{ background:#16a34a; animation: floatXY 13s ease-in-out infinite; }
         @keyframes floatY { 0%{transform:translateY(0)} 50%{transform:translateY(-16px)} 100%{transform:translateY(0)} }
         @keyframes floatX { 0%{transform:translateX(0)} 50%{transform:translateX(18px)} 100%{transform:translateX(0)} }
         @keyframes floatXY { 0%{transform:translate(0,0)} 50%{transform:translate(-14px,12px)} 100%{transform:translate(0,0)} }
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border:1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .header-pulse { animation: headerPulse 6s ease-in-out infinite; }
         @keyframes headerPulse { 0%,100% { box-shadow: 0 0 0 rgba(11,94,215,0); } 50% { box-shadow: 0 0 24px rgba(11,94,215,.15), 0 0 40px rgba(212,175,55,.10); } }
-        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#f1f5f9; border:1px solid #e2e8f0; color:#475569; }
-        .card-stat { background:#ffffff; border:1px solid #e2e8f0; }
-        .card-req { background:#ffffff; border:1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); width: 100%; box-sizing: border-box; }
-        .card-req:hover { transform: translateY(-2px); box-shadow:0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: #cbd5e1; }
-        .title-gradient { color:#1f2937; }
-        .divider { height:1px; background:linear-gradient(90deg, transparent, rgba(0,0,0,.1), transparent); }
+        .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; background:rgba(241,245,249,0.8); border:1px solid #e2e8f0; color:#475569; font-size: 0.75rem; font-weight: 500; }
+        .card-stat { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .card-stat:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+        }
+        .card-stat::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: currentColor;
+            opacity: 0.6;
+        }
+        .card-stat.blue::after { color: #3b82f6; }
+        .card-stat.green::after { color: #10b981; }
+        .card-stat.yellow::after { color: #f59e0b; }
+        .card-stat.red::after { color: #ef4444; }
+
+        .card-req { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            box-sizing: border-box; 
+            transition: all 0.3s ease;
+        }
+        .card-req:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); 
+            border-color: #3b82f6; 
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .tab-btn:hover {
+            color: #1e293b;
+            background: #f8fafc;
+        }
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .admin-table-container {
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+        .admin-table th {
+            background: #f8fafc;
+            padding: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .admin-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+        .admin-table tr:hover td {
+            background: #fcfdfe;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+            filter: brightness(1.05);
+        }
+        .btn-secondary {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #1e293b;
+        }
+        .btn-danger {
+            background: #fef2f2;
+            border: 1px solid #fee2e2;
+            color: #dc2626;
+        }
+        .btn-danger:hover {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .btn-success {
+            background: #f0fdf4;
+            border: 1px solid #dcfce7;
+            color: #16a34a;
+        }
+        .btn-success:hover {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+        .title-gradient { 
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .divider { height:1px; background:linear-gradient(90deg, transparent, rgba(0,0,0,.05), transparent); }
         .reveal { opacity: 0; transform: translateY(10px); transition: opacity .55s ease, transform .55s ease; }
         .reveal.reveal-in { opacity: 1; transform: translateY(0); }
         
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .tab-content.active {
@@ -676,24 +832,33 @@ try {
         
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
         }
         
         .form-input {
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 0.75rem;
             font-size: 0.875rem;
-            color: #1f2937;
+            color: #1e293b;
             background-color: #fff;
+            transition: all 0.2s ease;
+            width: 100%;
         }
         
         .form-input:focus {
             outline: none;
-            border-color: #1e40af;
-            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -706,17 +871,17 @@ try {
     </div>
     
     <!-- Main Content -->
-    <div id="main-content" class="flex-1 flex flex-col ml-64">
+    <div id="main-content" class="flex-1 flex flex-col ml-72">
         <!-- Top Nav -->
-        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 left-64 right-0 z-40 bg-white/80">
+        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 left-72 right-0 z-40 bg-white/80">
             <div class="flex items-center gap-4">
-                <a href="index.php?action=dashboard" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-blue-600 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
+                <a id="back-to-dashboard-btn" href="index.php?action=dashboard" class="hidden items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" style="display: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span class="font-medium">Back</span>
+                    <span>Back to Dashboard</span>
                 </a>
-                <h1 class="text-3xl font-bold title-gradient">Admin Management</h1>
+                <h1 class="text-3xl font-bold title-gradient">Admin Management Dashboard</h1>
             </div>
             <div class="flex items-center space-x-4">
                 <p class="text-gray-700">
@@ -726,7 +891,7 @@ try {
                 <span class="px-3 py-1 rounded-full text-sm" style="background:linear-gradient(90deg, rgba(11,94,215,.1), rgba(212,175,55,.1)); border:1px solid rgba(11,94,215,.2); color:#b45309; font-weight:400;">⚡ System Admin</span>
             </div>
         </header>
-        <div class="glass px-4 py-3 fixed top-24 left-64 right-0 z-30 bg-white/90">
+        <div class="glass px-4 py-3 fixed top-24 left-72 right-0 z-30 bg-white/90">
             <div class="marquee text-gray-600 text-base">
                 <span>Admin Dashboard — Managing the Chamber Request System with full administrative privileges ⚡ System Health: Optimal 💙💛💚 • </span>
             </div>
@@ -745,193 +910,242 @@ try {
                 <?php endif; ?>
                 
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 reveal">
-                    <div class="card-stat p-4 rounded-lg">
-                        <div class="text-sm text-blue-600">👥 Total Users</div>
-                        <div class="text-3xl font-extrabold text-blue-600 drop-shadow-sm"><?= $stats['total_users'] ?></div>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 reveal">
+                    <div class="card-stat blue">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Total Users</span>
+                            <span class="text-xl">👥</span>
+                        </div>
+                        <div class="text-3xl font-black text-slate-800 tracking-tight"><?= $stats['total_users'] ?></div>
                     </div>
-                    <div class="card-stat p-4 rounded-lg">
-                        <div class="text-sm text-green-600">📋 Total Requests</div>
-                        <div class="text-3xl font-extrabold text-green-600 drop-shadow-sm"><?= $stats['total_requests'] ?></div>
+                    <div class="card-stat green">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Total Requests</span>
+                            <span class="text-xl">📋</span>
+                        </div>
+                        <div class="text-3xl font-black text-slate-800 tracking-tight"><?= $stats['total_requests'] ?></div>
                     </div>
-                    <div class="card-stat p-4 rounded-lg">
-                        <div class="text-sm text-yellow-600">⏳ Pending</div>
-                        <div class="text-3xl font-extrabold text-yellow-600 drop-shadow-sm"><?= $stats['pending_requests'] ?></div>
+                    <div class="card-stat yellow">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-600">Pending</span>
+                            <span class="text-xl">⏳</span>
+                        </div>
+                        <div class="text-3xl font-black text-slate-800 tracking-tight"><?= $stats['pending_requests'] ?></div>
                     </div>
-                    <div class="card-stat p-4 rounded-lg">
-                        <div class="text-sm text-green-600">✅ Approved</div>
-                        <div class="text-3xl font-extrabold text-green-600 drop-shadow-sm"><?= $stats['approved_requests'] ?></div>
+                    <div class="card-stat green">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Approved</span>
+                            <span class="text-xl">✅</span>
+                        </div>
+                        <div class="text-3xl font-black text-slate-800 tracking-tight"><?= $stats['approved_requests'] ?></div>
                     </div>
-                    <div class="card-stat p-4 rounded-lg">
-                        <div class="text-sm text-red-600">❌ Rejected</div>
-                        <div class="text-3xl font-extrabold text-red-600 drop-shadow-sm"><?= $stats['rejected_requests'] ?></div>
+                    <div class="card-stat red">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-rose-600">Rejected</span>
+                            <span class="text-xl">❌</span>
+                        </div>
+                        <div class="text-3xl font-black text-slate-800 tracking-tight"><?= $stats['rejected_requests'] ?></div>
                     </div>
                 </div>
-                <div class="divider mb-4"></div>
+                <div class="divider mb-6"></div>
                 
-                <div class="flex border-b border-gray-200 mb-4">
-                    <button class="px-4 py-2 font-semibold text-gray-800 border-b-2 border-blue-600 tab active" onclick="showTab('users')">Users <span class="chip">👥</span></button>
-                    <button class="px-4 py-2 font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent tab" onclick="showTab('requests')">Requests <span class="chip">📋</span></button>
-                    <button class="px-4 py-2 font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent tab" onclick="showTab('my_requests')">My Requests <span class="chip">📝</span></button>
-                    <button class="px-4 py-2 font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent tab" onclick="showTab('analytics')">Analytics <span class="chip">📊</span></button>
-                    <button class="px-4 py-2 font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent tab" onclick="showTab('settings')">Settings <span class="chip">⚙️</span></button>
+                <div class="flex border-b border-gray-200 mb-6 bg-slate-50/50 rounded-t-xl px-2">
+                    <button class="tab-btn active" onclick="showTab('users')">
+                        <span>👥</span> Users
+                    </button>
+                    <button class="tab-btn" onclick="showTab('requests')">
+                        <span>📋</span> Requests
+                    </button>
+                    <button class="tab-btn" onclick="showTab('my_requests')">
+                        <span>📝</span> My Requests
+                    </button>
+                    <button class="tab-btn" onclick="showTab('analytics')">
+                        <span>📊</span> Analytics
+                    </button>
+                    <button class="tab-btn" onclick="showTab('settings')">
+                        <span>⚙️</span> Settings
+                    </button>
                 </div>
                 
                 <div id="users" class="tab-content active">
-                    <h2 class="text-2xl font-bold mb-4 title-gradient">User Management <span class="chip">👥</span></h2>
-                    <div class="mb-4 flex gap-3">
-                        <button class="btn btn-primary" onclick="showCreateUser()">➕ Add New User</button>
-                        <a href="test_admin.php" class="btn btn-secondary" target="_blank">🧪 Run Tests</a>
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold title-gradient">User Management</h2>
+                        <div class="flex gap-3">
+                            <button class="btn btn-primary" onclick="showCreateUser()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                                Add New User
+                            </button>
+                            <a href="test_admin.php" class="btn btn-secondary" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7zm0 2h6v1H7V4zm-2 3a1 1 0 011-1h8a1 1 0 011 1v8a1 1 0 01-1 1H6a1 1 0 01-1-1V7zm3 2a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd" />
+                                </svg>
+                                Run Tests
+                            </a>
+                        </div>
                     </div>
                 
-                <div id="createUserForm" class="glass p-6 rounded-lg mb-6" style="display: none;">
-                    <h3 class="text-xl font-bold mb-4 text-gray-800">Create New User</h3>
+                <div id="createUserForm" class="glass p-8 rounded-2xl mb-8 border-2 border-blue-100/50 shadow-xl" style="display: none;">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-slate-800">Create New User</h3>
+                        <button onclick="hideCreateUser()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                     <form method="POST" action="index.php?action=admin_management">
                         <?= csrf_field() ?>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <input type="text" name="fullname" placeholder="Full Name" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500">
-                            <input type="text" name="username" placeholder="Username/Email" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500">
-                            <input type="password" name="password" placeholder="Password" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500">
-                            <select name="department" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                                <option value="">Select Department</option>
-                                <option>HR & Administration</option>
-                                <option>PR & ICT</option>
-                                <option>Membership</option>
-                                <option>Finance</option>
-                                <option>Internal Auditor</option>
-                                <option>Legal Officer</option>
-                                <option>Industrial Development</option>
-                                <option>Business Development</option>
-                                <option>Project</option>
-                                <option>Agribusiness</option>
-                            </select>
-                            <select name="directorate" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500">
-                                <option value="">Select Directorate</option>
-                                <?php
-                                try {
-                                    $stmt = $pdo->prepare("SELECT name FROM directorates WHERE is_active = 1 ORDER BY name");
-                                    $stmt->execute();
-                                    $directorates = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                                    foreach ($directorates as $d) {
-                                        echo "<option value='" . htmlspecialchars($d) . "'>" . htmlspecialchars($d) . "</option>";
+                        <div class="form-grid">
+                            <div>
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="fullname" placeholder="John Doe" required class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">Username / Email</label>
+                                <input type="text" name="username" placeholder="johndoe" required class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">Password</label>
+                                <input type="password" name="password" placeholder="••••••••" required class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">Department</label>
+                                <select name="department" required class="form-input">
+                                    <option value="">Select Department</option>
+                                    <option>HR & Administration</option>
+                                    <option>PR & ICT</option>
+                                    <option>Membership</option>
+                                    <option>Finance</option>
+                                    <option>Internal Auditor</option>
+                                    <option>Legal Officer</option>
+                                    <option>Industrial Development</option>
+                                    <option>Business Development</option>
+                                    <option>Project</option>
+                                    <option>Agribusiness</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Directorate</label>
+                                <select name="directorate" required class="form-input">
+                                    <option value="">Select Directorate</option>
+                                    <?php
+                                    try {
+                                        $stmt = $pdo->prepare("SELECT name FROM directorates WHERE is_active = 1 ORDER BY name");
+                                        $stmt->execute();
+                                        $directorates = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                                        foreach ($directorates as $d) {
+                                            echo "<option value='" . htmlspecialchars($d) . "'>" . htmlspecialchars($d) . "</option>";
+                                        }
+                                    } catch (Exception $e) {
+                                        $fallbackOptions = [
+                                            'Human Resource Directorate',
+                                            'Finance Directorate',
+                                            'Operations Directorate',
+                                            'Technical Services Directorate',
+                                            'Corporate Services Directorate',
+                                            'Legal Services Directorate',
+                                            'Internal Audit Directorate'
+                                        ];
+                                        foreach ($fallbackOptions as $d) {
+                                            echo "<option value='" . htmlspecialchars($d) . "'>" . htmlspecialchars($d) . "</option>";
+                                        }
                                     }
-                                } catch (Exception $e) {
-                                    $fallbackOptions = [
-                                        'Human Resource Directorate',
-                                        'Finance Directorate',
-                                        'Operations Directorate',
-                                        'Technical Services Directorate',
-                                        'Corporate Services Directorate',
-                                        'Legal Services Directorate',
-                                        'Internal Audit Directorate'
-                                    ];
-                                    foreach ($fallbackOptions as $d) {
-                                        echo "<option value='" . htmlspecialchars($d) . "'>" . htmlspecialchars($d) . "</option>";
-                                    }
-                                }
-                                ?>
-                            </select>
-                            <select name="role_id" required class="form-input">
-                                <option value="">Select Role</option>
-                                <option value="1">Employee</option>
-                                <option value="2">HRM</option>
-                                <option value="3">HOD</option>
-                                <option value="4">Chief Executive Officer</option>
-                                <option value="5">Finance</option>
-                                <option value="6">Internal Auditor</option>
-                                <option value="7">Admin</option>
-                            </select>
+                                    ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">System Role</label>
+                                <select name="role_id" required class="form-input">
+                                    <option value="">Select Role</option>
+                                    <option value="1">Employee</option>
+                                    <option value="2">HRM</option>
+                                    <option value="3">HOD</option>
+                                    <option value="4">Chief Executive Officer</option>
+                                    <option value="5">Finance</option>
+                                    <option value="6">Internal Auditor</option>
+                                    <option value="7">Admin</option>
+                                </select>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 1rem;">
-                            <button type="submit" name="admin_create_user" value="1" class="btn btn-primary">Create User</button>
+                        <div class="flex justify-end gap-3 mt-4">
                             <button type="button" onclick="hideCreateUser()" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" name="admin_create_user" value="1" class="btn btn-primary">Create User</button>
                         </div>
                     </form>
                 </div>
                 
-                <!-- Debug Info -->
-                <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p class="text-yellow-700 text-sm">
-                        <strong>Debug:</strong> Found <?= count($users_list) ?> users in database.
-                        <?php if (empty($users_list)): ?>
-                        <br>This could mean: 1) No users registered yet, 2) Database connection issue, 3) Users table doesn't exist.
-                        <br><strong>Try:</strong> Register a new user via the registration page to test the system.
-                        <?php else: ?>
-                        <br>Users are loading correctly. If you don't see them below, check browser console for errors.
-                        <?php endif; ?>
-                    </p>
-                </div>
-
                 <?php if (!empty($users_list)): ?>
-                <div class="overflow-x-auto">
-                    <table class="w-full border-collapse">
+                <div class="admin-table-container">
+                    <table class="admin-table w-full">
                         <thead>
-                            <tr class="border-b border-gray-200">
-                                <th class="text-left p-4 text-gray-500 font-medium">ID</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Name</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Username/Email</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Department</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Role</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Status</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Last Login</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Created</th>
-                                <th class="text-left p-4 text-gray-500 font-medium">Actions</th>
+                            <tr>
+                                <th>ID</th>
+                                <th>Full Name</th>
+                                <th>Username</th>
+                                <th>Department</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Created</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($users_list as $u): ?>
-                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
-                                <td class="p-4 text-gray-600"><?= htmlspecialchars($u['user_id']) ?></td>
-                                <td class="p-4 text-gray-800 font-medium"><?= htmlspecialchars($u['fullname']) ?></td>
-                                <td class="p-4 text-gray-600"><?= htmlspecialchars($u['username']) ?></td>
-                                <td class="p-4 text-gray-600"><?= htmlspecialchars($u['department']) ?></td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($u['role_id'] ?? 0) == 7 ? 'bg-red-100 text-red-700' : 
-                                        (($u['role_id'] ?? 0) == 4 ? 'bg-purple-100 text-purple-700' : 
-                                        (($u['role_id'] ?? 0) == 6 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')) 
+                            <tr>
+                                <td class="text-slate-500 font-mono text-xs">#<?= htmlspecialchars($u['user_id']) ?></td>
+                                <td class="font-bold text-slate-700"><?= htmlspecialchars($u['fullname']) ?></td>
+                                <td class="text-slate-600"><?= htmlspecialchars($u['username']) ?></td>
+                                <td class="text-slate-600">
+                                    <span class="chip"><?= htmlspecialchars($u['department']) ?></span>
+                                </td>
+                                <td>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold <?= 
+                                        ($u['role_id'] ?? 0) == 7 ? 'bg-rose-50 text-rose-700 border border-rose-100' : 
+                                        (($u['role_id'] ?? 0) == 4 ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 
+                                        (($u['role_id'] ?? 0) == 6 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-blue-50 text-blue-700 border border-blue-100')) 
                                     ?>">
                                         <?= htmlspecialchars($u['role_name'] ?? 'Unknown') ?>
                                     </span>
                                 </td>
-                                <td class="p-4">
+                                <td>
                                     <?php $isDeleted = !empty($u['deleted_at']); $isActive = (int)($u['active'] ?? 1) === 1; ?>
                                     <?php if ($isDeleted): ?>
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-600">Deleted</span>
+                                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-500">Deleted</span>
                                     <?php else: ?>
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium <?= $isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' ?>">
+                                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold <?= $isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' ?>">
                                             <?= $isActive ? 'Active' : 'Inactive' ?>
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="p-4 text-gray-600 text-sm"><?= isset($u['last_login']) ? date('M j, Y', strtotime($u['last_login'])) : 'Never' ?></td>
-                                <td class="p-4 text-gray-600 text-sm"><?= isset($u['created_at']) ? date('M j, Y', strtotime($u['created_at'])) : 'N/A' ?></td>
-                                <td class="p-4">
-                                    <div class="flex gap-2">
+                                <td class="text-slate-500 text-xs"><?= isset($u['last_login']) ? date('M j, Y', strtotime($u['last_login'])) : '<span class="italic text-slate-400">Never</span>' ?></td>
+                                <td class="text-slate-500 text-xs"><?= isset($u['created_at']) ? date('M j, Y', strtotime($u['created_at'])) : 'N/A' ?></td>
+                                <td>
+                                    <div class="flex justify-end gap-2">
                                         <?php if ($user['role_id'] == 4): // Only CEO can send messages ?>
                                         <button onclick="sendMessageToUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
-                                                class="btn btn-primary btn-sm">
-                                            📧 Message
+                                                class="btn btn-secondary btn-sm" title="Send Message">
+                                            📧
                                         </button>
                                         <?php endif; ?>
                                         <?php if (empty($u['deleted_at'])): ?>
                                             <?php if ((int)($u['active'] ?? 1) === 1): ?>
                                                 <button onclick="deactivateUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
-                                                        class="btn btn-danger btn-sm">
-                                                    🚫 Deactivate
+                                                        class="btn btn-danger btn-sm" title="Deactivate">
+                                                    🚫
                                                 </button>
                                             <?php else: ?>
                                                 <button onclick="activateUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
-                                                        class="btn btn-success btn-sm">
-                                                    ✅ Activate
+                                                        class="btn btn-success btn-sm" title="Activate">
+                                                    ✅
                                                 </button>
                                             <?php endif; ?>
                                             <button onclick="deleteUser(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['fullname']) ?>')" 
-                                                    class="btn btn-secondary btn-sm">
-                                                🗑️ Delete
+                                                    class="btn btn-secondary btn-sm hover:text-rose-600" title="Delete">
+                                                🗑️
                                             </button>
-                                        <?php else: ?>
-                                            <span class="text-xs text-gray-400">No actions</span>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -941,101 +1155,75 @@ try {
                     </table>
                 </div>
                 <?php else: ?>
-                <div class="text-center text-gray-500 py-10">
-                    <p class="text-lg">👥 No users found in database.</p>
-                    <p class="mt-2 text-sm">Try registering a new user to test the system.</p>
-                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left max-w-md mx-auto">
-                        <p class="text-blue-700 text-sm mb-2"><strong>Troubleshooting:</strong></p>
-                        <ul class="text-blue-600 text-xs space-y-1">
-                            <li>• Check if users table exists in database</li>
-                            <li>• Verify database connection in config.php</li>
-                            <li>• Try registering a new user</li>
-                            <li>• Check server error logs</li>
-                        </ul>
-                    </div>
+                <div class="text-center text-gray-500 py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <div class="text-5xl mb-4">👥</div>
+                    <p class="text-xl font-bold text-slate-700">No users found</p>
+                    <p class="mt-2 text-slate-500">Try registering a new user to get started.</p>
                 </div>
                 <?php endif; ?>
             </div>
         </div>
         
         <div id="requests" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4 title-gradient">Recent Requests <span class="chip">📋</span></h2>
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold title-gradient">Recent Requests</h2>
+            </div>
                 <?php if (!empty($recent_requests)): ?>
-                <div class="overflow-x-auto">
-                    <table class="w-full border-collapse">
+                <div class="admin-table-container">
+                    <table class="admin-table w-full">
                         <thead>
-                            <tr class="border-b border-gray-200">
-                                <th class="text-left p-4 text-gray-700 font-semibold">ID</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Employee</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Type</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Status</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">HOD</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">HRM</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Audit</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Finance</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">CEO</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Created</th>
-                                <th class="text-left p-4 text-gray-700 font-semibold">Actions</th>
+                            <tr>
+                                <th>ID</th>
+                                <th>Employee</th>
+                                <th>Type</th>
+                                <th>Overall Status</th>
+                                <th>Flow Status</th>
+                                <th>Created</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recent_requests as $req): ?>
-                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                <td class="p-4 text-gray-600">#<?= $req['request_id'] ?></td>
-                                <td class="p-4 text-gray-800 font-medium"><?= htmlspecialchars($req['employee_name'] ?? 'Unknown') ?></td>
-                                <td class="p-4 text-gray-600"><?= htmlspecialchars($req['request_type'] ?? 'N/A') ?></td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($req['status_name'] ?? '') === 'approved' ? 'bg-green-100 text-green-700' : 
-                                        (($req['status_name'] ?? '') === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700') 
+                            <tr>
+                                <td class="text-slate-500 font-mono text-xs">#<?= $req['request_id'] ?></td>
+                                <td class="font-bold text-slate-700"><?= htmlspecialchars($req['employee_name'] ?? 'Unknown') ?></td>
+                                <td>
+                                    <span class="chip"><?= htmlspecialchars($req['request_type'] ?? 'N/A') ?></span>
+                                </td>
+                                <td>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold <?= 
+                                        ($req['status_name'] ?? '') === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 
+                                        (($req['status_name'] ?? '') === 'rejected' ? 'bg-rose-50 text-rose-700 border border-rose-100' : 'bg-amber-50 text-amber-700 border border-amber-100') 
                                     ?>">
-                                        <?= htmlspecialchars($req['status_name'] ?? 'Unknown') ?>
+                                        <?= ucfirst(htmlspecialchars($req['status_name'] ?? 'Unknown')) ?>
                                     </span>
                                 </td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($req['hod_status'] ?? '') === 'approved' ? 'bg-green-100 text-green-700' : 
-                                        (($req['hod_status'] ?? '') === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') 
-                                    ?>">
-                                        <?= htmlspecialchars($req['hod_status'] ?? 'pending') ?>
-                                    </span>
+                                <td>
+                                    <div class="flex gap-1.5">
+                                        <?php 
+                                        $stages = [
+                                            ['label' => 'HOD', 'status' => $req['hod_status'] ?? 'pending'],
+                                            ['label' => 'HRM', 'status' => $req['hrm_status'] ?? 'pending'],
+                                            ['label' => 'AUD', 'status' => $req['auditor_status'] ?? 'pending'],
+                                            ['label' => 'FIN', 'status' => $req['finance_status'] ?? 'pending'],
+                                            ['label' => 'CEO', 'status' => $req['ed_status'] ?? 'pending'],
+                                        ];
+                                        foreach ($stages as $stage): 
+                                            $s_color = $stage['status'] === 'approved' ? 'bg-emerald-500' : ($stage['status'] === 'rejected' ? 'bg-rose-500' : 'bg-slate-200');
+                                        ?>
+                                            <div class="group relative">
+                                                <div class="w-3 h-3 rounded-full <?= $s_color ?>"></div>
+                                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                    <?= $stage['label'] ?>: <?= ucfirst($stage['status']) ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($req['hrm_status'] ?? '') === 'approved' ? 'bg-green-100 text-green-700' : 
-                                        (($req['hrm_status'] ?? '') === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') 
-                                    ?>">
-                                        <?= htmlspecialchars($req['hrm_status'] ?? 'pending') ?>
-                                    </span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($req['auditor_status'] ?? '') === 'approved' ? 'bg-green-100 text-green-700' : 
-                                        (($req['auditor_status'] ?? '') === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') 
-                                    ?>">
-                                        <?= htmlspecialchars($req['auditor_status'] ?? 'pending') ?>
-                                    </span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($req['finance_status'] ?? '') === 'approved' ? 'bg-green-100 text-green-700' : 
-                                        (($req['finance_status'] ?? '') === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') 
-                                    ?>">
-                                        <?= htmlspecialchars($req['finance_status'] ?? 'pending') ?>
-                                    </span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= 
-                                        ($req['ed_status'] ?? '') === 'approved' ? 'bg-green-100 text-green-700' : 
-                                        (($req['ed_status'] ?? '') === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') 
-                                    ?>">
-                                        <?= htmlspecialchars($req['ed_status'] ?? 'pending') ?>
-                                    </span>
-                                </td>
-                                <td class="p-4 text-gray-500 text-sm"><?= isset($req['created_at']) ? date('M j, Y', strtotime($req['created_at'])) : 'N/A' ?></td>
-                                <td class="p-4">
+                                <td class="text-slate-500 text-xs"><?= isset($req['created_at']) ? date('M j, Y', strtotime($req['created_at'])) : 'N/A' ?></td>
+                                <td class="text-right">
                                     <a href="index.php?action=view_request&id=<?= $req['request_id'] ?>" 
-                                       class="btn btn-primary btn-sm">
+                                       class="btn btn-secondary btn-sm">
                                         View Details
                                     </a>
                                 </td>
@@ -1044,6 +1232,15 @@ try {
                         </tbody>
                     </table>
                 </div>
+                <?php else: ?>
+                <div class="text-center text-gray-500 py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <div class="text-5xl mb-4">📋</div>
+                    <p class="text-xl font-bold text-slate-700">No requests found</p>
+                    <p class="mt-2 text-slate-500">All requests will appear here once submitted.</p>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
                 <?php else: ?>
                 <div class="text-center text-gray-500 py-10">
                     <p class="text-lg">📋 No requests to display.</p>
@@ -1182,7 +1379,14 @@ try {
                                     </div>
 
                                     <div class="flex flex-col sm:flex-row justify-between items-center mt-3 gap-2">
-                                        <a href="index.php?action=view_request&id=<?= e($req['request_id']) ?>" class="btn btn-primary btn-sm text-xs">View Details</a>
+                                        <div class="flex gap-2">
+                                            <a href="index.php?action=view_request&id=<?= e($req['request_id']) ?>" class="btn btn-primary btn-sm text-xs">View Details</a>
+                                            <?php if (strtolower((string)$status) === 'rejected'): ?>
+                                                <a href="index.php?action=edit_request&id=<?= e($req['request_id']) ?>" class="btn btn-secondary btn-sm text-xs bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100">
+                                                    ✏️ Edit & Resubmit
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
                                         <?php if (strtolower((string)$status) === 'pending'): ?>
                                             <span class="text-xs text-yellow-700 font-medium">⏳ In Progress</span>
                                         <?php endif; ?>
@@ -2421,7 +2625,7 @@ try {
 </main>
 </div>
 
-<!-- Modals -->
+<!-- Message Modal -->
 <div id="messageModal" class="modal">
     <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
         <div class="flex items-center justify-between mb-4">
@@ -2442,6 +2646,12 @@ try {
                 <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
                 <textarea name="message_content" required rows="4" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-sm" placeholder="Type your private message here..."></textarea>
             </div>
+            <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p class="text-yellow-800 text-sm">
+                    <strong>🔒 Private Message Notice:</strong><br>
+                    This message will be sent privately to the selected user only. Other users cannot see or reply to this message.
+                </p>
+            </div>
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="closeMessageModal()" class="btn btn-secondary">Cancel</button>
                 <button type="submit" name="admin_send_message" class="btn btn-primary">Send Message</button>
@@ -2450,116 +2660,237 @@ try {
     </div>
 </div>
 
+<!-- Loading Modal -->
 <div id="loadingModal" class="modal">
-    <div class="modal-card p-8 text-center bg-white rounded-xl shadow-2xl">
+    <div class="modal-card p-8 text-center bg-white rounded-xl shadow-2xl border border-gray-200">
         <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <h3 class="text-xl font-bold text-gray-800 mb-2">Processing...</h3>
-        <p id="loadingMessage" class="text-gray-600">Please wait...</p>
+        <p id="loadingMessage" class="text-gray-600">Please wait while we process your request.</p>
     </div>
 </div>
 
+<!-- Database Restore Modal -->
 <div id="restoreModal" class="modal">
-    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl">
+    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-800">Restore Database</h3>
-            <button onclick="closeRestoreModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+            <h3 class="text-xl font-bold text-gray-800">🔄 Restore Database</h3>
+            <button onclick="closeRestoreModal()" class="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+        </div>
+        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-red-700 text-sm">
+                <strong>⚠️ Warning:</strong><br>
+                Restoring a database backup will overwrite all current data. This action cannot be undone. Please ensure you have a recent backup before proceeding.
+            </p>
         </div>
         <form onsubmit="return handleRestore(event)">
-            <input type="file" accept=".sql" class="w-full mb-4">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Backup File</label>
+                <input type="file" accept=".sql,.zip" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all shadow-sm">
+            </div>
+            <div class="mb-4">
+                <label class="flex items-center gap-2 text-gray-700">
+                    <input type="checkbox" required class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm">I understand this will overwrite all current data</span>
+                </label>
+            </div>
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="closeRestoreModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" class="btn btn-danger">Restore</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="addDirectorateModal" class="modal">
-    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-800">Add Directorate</h3>
-            <button onclick="closeAddDirectorateModal()" class="text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-        <form method="POST" action="index.php?action=admin_management">
-            <?= csrf_field() ?>
-            <input type="text" name="directorate_name" required class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="Directorate Name">
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeAddDirectorateModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" name="add_directorate" class="btn btn-primary">Add</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="addRoleModal" class="modal">
-    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-800">Add Role</h3>
-            <button onclick="closeAddRoleModal()" class="text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-        <form method="POST" action="index.php?action=admin_management">
-            <?= csrf_field() ?>
-            <input type="text" name="role_name" required class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="Role Name">
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeAddRoleModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" name="add_role" class="btn btn-primary">Add</button>
+                <button type="submit" class="btn btn-danger">Restore Database</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+// Unified tab switching with sidebar management
 function showTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-    document.querySelectorAll('.tab').forEach(tab => {
+    // Hide all tab contents
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+    });
+    
+    // Update tab button styles (top row buttons with class "tab")
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
         tab.classList.remove('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
         tab.classList.add('border-transparent', 'text-gray-500');
     });
     
+    // Show selected tab content
     const selectedTab = document.getElementById(tabName);
-    if (selectedTab) selectedTab.style.display = 'block';
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.style.display = 'block';
+    }
     
-    const btn = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
-    if (btn) {
-        btn.classList.remove('border-transparent', 'text-gray-500');
-        btn.classList.add('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
+    // Mark the corresponding button as active
+    const activeButton = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
+    if (activeButton) {
+        activeButton.classList.remove('border-transparent', 'text-gray-500');
+        activeButton.classList.add('active', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
     }
-
-    const sidebar = document.getElementById('sidebar-container');
-    const main = document.getElementById('main-content');
-    if (['analytics', 'settings', 'my_requests'].includes(tabName)) {
-        if (sidebar) sidebar.style.display = 'none';
-        if (main) main.style.marginLeft = '0';
+    
+    // Sidebar visibility and layout adjustments
+    const sidebarContainer = document.getElementById('sidebar-container');
+    const mainContent = document.getElementById('main-content');
+    const backButton = document.getElementById('back-to-dashboard-btn');
+    if (tabName === 'analytics' || tabName === 'settings' || tabName === 'my_requests') {
+        if (sidebarContainer) sidebarContainer.style.display = 'none';
+        if (mainContent) mainContent.style.marginLeft = '0';
+        // Show back button for my_requests tab
+        if (tabName === 'my_requests' && backButton) {
+            backButton.style.display = 'flex';
+        } else if (backButton) {
+            backButton.style.display = 'none';
+        }
     } else {
-        if (sidebar) sidebar.style.display = 'block';
-        if (main) main.style.marginLeft = '16rem';
+        if (sidebarContainer) sidebarContainer.style.display = 'block';
+        if (mainContent) mainContent.style.marginLeft = '18rem'; // ml-72
+        if (backButton) backButton.style.display = 'none';
     }
 }
 
-function showCreateUser() { document.getElementById('createUserForm').style.display = 'block'; }
-function hideCreateUser() { document.getElementById('createUserForm').style.display = 'none'; }
-function sendMessageToUser(id, name) {
-    document.getElementById('messageUserId').value = id;
-    document.getElementById('messageUserName').textContent = name;
-    document.getElementById('messageModal').classList.add('show');
-}
-function closeMessageModal() { document.getElementById('messageModal').classList.remove('show'); }
-function showAddDirectorateModal() { document.getElementById('addDirectorateModal').classList.add('show'); }
-function closeAddDirectorateModal() { document.getElementById('addDirectorateModal').classList.remove('show'); }
-function showAddRoleModal() { document.getElementById('addRoleModal').classList.add('show'); }
-function closeAddRoleModal() { document.getElementById('addRoleModal').classList.remove('show'); }
-function showRestoreModal() { document.getElementById('restoreModal').classList.add('show'); }
-function closeRestoreModal() { document.getElementById('restoreModal').classList.remove('show'); }
-
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize default tab to Users and wire up My Requests search
+document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
-    showTab(params.get('tab') || 'users');
+    const initialTab = params.get('tab');
+    showTab(initialTab && ['users','requests','my_requests','analytics','settings'].includes(initialTab) ? initialTab : 'users');
+
+    const myAdminRequestSearch = document.getElementById('myAdminRequestSearch');
+    const myAdminRequestsContainer = document.getElementById('myAdminRequestsContainer');
+    
+    if (myAdminRequestSearch && myAdminRequestsContainer) {
+        myAdminRequestSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const requests = myAdminRequestsContainer.querySelectorAll('.card-req');
+            
+            requests.forEach(request => {
+                const searchContent = (request.getAttribute('data-search-content') || '').toLowerCase();
+                if (!searchTerm || searchContent.includes(searchTerm)) {
+                    request.style.display = 'block';
+                } else {
+                    request.style.display = 'none';
+                }
+            });
+            
+            const visibleRequests = Array.from(requests).filter(req => req.style.display !== 'none');
+            let noResultsMsg = myAdminRequestsContainer.querySelector('.no-results');
+            
+            if (visibleRequests.length === 0 && searchTerm !== '') {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('div');
+                    noResultsMsg.className = 'no-results text-center text-gray-500 py-10';
+                    noResultsMsg.innerHTML = `
+                        <p class="text-lg">🔍 No requests found</p>
+                        <p class="mt-2 text-sm text-gray-400">No requests match your search criteria.</p>
+                    `;
+                    myAdminRequestsContainer.appendChild(noResultsMsg);
+                }
+                noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+            }
+        });
+    }
 });
 </script>
+
+<!-- Mobile Menu JavaScript -->
+<script src="assets/mobile-menu.js"></script>
+
 <style>
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:60; }
     .modal.show { display:flex; }
-    .modal-card { width: 90%; max-width: 500px; }
+    .modal-card { background: #ffffff; border:1px solid rgba(0,0,0,.1); color:#1f2937; border-radius: 12px; width: 90%; max-width: 520px; box-shadow: 0 24px 64px rgba(0,0,0,.2); }
+    .marquee { white-space: nowrap; overflow: hidden; }
+    .marquee > span { display:inline-block; padding-left:100%; animation: marquee 30s linear infinite; }
+    @keyframes marquee { 0% { transform: translateX(100%);} 100% { transform: translateX(-100%);} }
+    
+    /* Enhanced scrolling styles */
+    .smooth-scroll {
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+    }
+    
+    .smooth-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .smooth-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .smooth-scroll::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.3);
+        border-radius: 4px;
+    }
+    
+    .smooth-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.5);
+    }
+    
+    /* Back button animations */
+    .back-button {
+        backdrop-filter: blur(12px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .back-button:hover {
+        transform: translateX(-2px) scale(1.05);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
 </style>
+
+<!-- Add Directorate Modal -->
+<div id="addDirectorateModal" class="modal">
+    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Add New Directorate</h3>
+            <button onclick="closeAddDirectorateModal()" class="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+        </div>
+        <form method="POST" action="index.php?action=admin_management">
+            <?= csrf_field() ?>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Directorate Name</label>
+                <input
+                    type="text"
+                    name="directorate_name"
+                    required
+                    class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-sm"
+                    placeholder="Enter directorate name"
+                >
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeAddDirectorateModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" name="add_directorate" class="btn btn-primary">Add Directorate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Role Modal -->
+<div id="addRoleModal" class="modal">
+    <div class="modal-card p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Add New Role</h3>
+            <button onclick="closeAddRoleModal()" class="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+        </div>
+        <form method="POST" action="index.php?action=admin_management">
+            <?= csrf_field() ?>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Role Name</label>
+                <input type="text" name="role_name" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-sm" placeholder="Enter role name">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeAddRoleModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" name="add_role" class="btn btn-primary">Add Role</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 </body>
 </html>

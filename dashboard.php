@@ -184,9 +184,9 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
     <?php endif; ?>
     
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col <?= empty($hide_sidebar) ? 'ml-64' : '' ?>">
+    <div class="flex-1 flex flex-col <?= empty($hide_sidebar) ? 'ml-72' : '' ?>">
         <!-- Top Nav -->
-        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 <?= empty($hide_sidebar) ? 'left-64' : 'left-0' ?> right-0 z-40 bg-white/90">
+        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 <?= empty($hide_sidebar) ? 'left-72' : 'left-0' ?> right-0 z-40 bg-white/90">
             <div class="flex items-center gap-4">
                 <?php if (!empty($hide_sidebar)): ?>
                 <a href="index.php?action=dashboard" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -252,7 +252,7 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                 <a href="index.php?action=leave_balances" class="btn btn-secondary">Leave Balances</a>
             </div>
         </header>
-        <div class="glass px-4 py-3 fixed top-24 left-64 right-0 z-30 bg-white/80">
+        <div class="glass px-4 py-3 fixed top-24 left-72 right-0 z-30 bg-white/80">
             <div class="marquee text-gray-800 text-base">
                 <span>Welcome <?= e($user['fullname']) ?> — Wishing you a productive day at the Chamber! ✨ Empowering businesses across Tanzania and Africa 💙💛💚 • </span>
             </div>
@@ -594,7 +594,14 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                                 </div>
 
                                 <div class="flex justify-between items-center mt-4">
-                                    <a href="index.php?action=view_request&id=<?= e($req['request_id']) ?>" class="btn btn-primary btn-sm">View Details</a>
+                                    <div class="flex gap-2">
+                                        <a href="index.php?action=view_request&id=<?= e($req['request_id']) ?>" class="btn btn-primary btn-sm">View Details</a>
+                                        <?php if (strtolower((string)$status) === 'rejected'): ?>
+                                            <a href="index.php?action=edit_request&id=<?= e($req['request_id']) ?>" class="btn btn-secondary btn-sm bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100">
+                                                ✏️ Edit & Resubmit
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                             <?php endforeach; ?>

@@ -49,28 +49,32 @@ $details = json_decode((string)($request['details_json'] ?? '{}'), true) ?: [];
     <?php include __DIR__ . '/sidebar.php'; ?>
     
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col ml-64">
+    <div class="flex-1 flex flex-col md:ml-72">
         <!-- Top Nav -->
-        <header class="bg-white/80 backdrop-blur border-b border-gray-200 shadow-sm p-4 flex items-center justify-between sticky top-0 z-40 text-gray-800">
+        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 left-0 md:left-72 right-0 z-40 bg-white/90">
             <div class="flex items-center gap-4">
-                <a href="index.php?action=view_request&id=<?= e($request['request_id']) ?>" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                <a href="index.php?action=dashboard" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span class="font-medium">Back</span>
+                    <span class="font-bold">Back to Dashboard</span>
                 </a>
-                <h1 class="text-xl font-semibold">Edit Request #<?= e($request['request_id']) ?></h1>
+                <h1 class="text-3xl font-black title-gradient tracking-tight">Edit Request #<?= e($request['request_id']) ?></h1>
             </div>
-            <div class="flex items-center space-x-4">
-                <p>
-                    Welcome, <span class="font-medium text-gray-800"><?= e($user['fullname']) ?></span>
-                </p>
+            <div class="flex items-center space-x-6">
+                <div class="flex flex-col text-right">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Signed in as</span>
+                    <span class="font-black text-slate-700"><?= e($user['fullname']) ?></span>
+                </div>
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg">
+                    <?= strtoupper(substr($user['fullname'], 0, 1)) ?>
+                </div>
             </div>
         </header>
 
         <!-- Main Content Area -->
-        <main class="flex-1 p-6">
-            <div class="glass p-6 rounded-2xl shadow-lg max-w-4xl mx-auto" style="color:#1e293b;">
+        <main class="flex-1 p-8 pt-32">
+            <div class="glass p-8 rounded-3xl shadow-xl max-w-4xl mx-auto" style="color:#1e293b; background: white;">
                 <div class="flex items-center justify-between mb-2">
                     <h2 class="text-2xl font-bold text-gray-900">Edit Rejected Request <span id="type_chip" class="chip" style="display:none;"><span id="type_emoji">📝</span><span id="type_label"></span></span></h2>
                     <div class="text-sm text-gray-500 font-semibold tracking-wider">🏢 TNCC ✨</div>

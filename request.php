@@ -222,12 +222,17 @@ class RequestModel {
                 } catch (PDOException $e) {
                     error_log('Failed to deduct annual leave: ' . $e->getMessage());
                 }
+            }
 
-                // Create notification for status change
-                $this->create_status_notification($request_id, $user_role_id, $status, $remark);
-                
-                // Notify previous flow members
-                $this->notify_flow_chain($request_id, $user_role_id, $status, $remark);
+            // Notifications for status change (any update: approval or rejection)
+            $this->create_status_notification($request_id, $user_role_id, $status, $remark);
+            
+            // Notify previous flow members (any update: approval or rejection)
+            $this->notify_flow_chain($request_id, $user_role_id, $status, $remark);
+            
+            // If approved and not the final stage (CEO), notify the next in flow
+            if ($status === 'approved' && $user_role_id != 4) {
+                $this->notify_next_in_flow($request_id, $user_role_id, $remark);
             }
             
             $this->pdo->commit();
@@ -236,6 +241,84 @@ class RequestModel {
             $this->pdo->rollBack();
             error_log("Error updating request status: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    public function notify_resubmission($request_id) {
+        try {
+            $stmtReq = $this->pdo->prepare("SELECT r.*, u.fullname as requester_name, u.department FROM requests r JOIN users u ON r.user_id = u.user_id WHERE r.request_id = ?");
+            $stmtReq->execute([$request_id]);
+            $req = $stmtReq->fetch(PDO::FETCH_ASSOC);
+            if (!$req) return;
+
+            // Find who is now pending (the one who rejected it)
+            $pendingRole = 0;
+            if ($req['hod_status'] === 'pending') $pendingRole = 3;
+            elseif ($req['hrm_status'] === 'pending') $pendingRole = 2;
+            elseif ($req['auditor_status'] === 'pending') $pendingRole = 6;
+            elseif ($req['finance_status'] === 'pending') $pendingRole = 5;
+            elseif ($req['ed_status'] === 'pending') $pendingRole = 4;
+
+            if ($pendingRole > 0) {
+                $recipients = [];
+                if ($pendingRole == 3) {
+                    $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 3 AND department = ?");
+                    $st->execute([$req['department']]);
+                } else {
+                    $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = ?");
+                    $st->execute([$pendingRole]);
+                }
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+
+                $ntTitle = "Resubmission: Request #" . $request_id;
+                $ntMsg = "Request (" . ($req['title'] ?? $req['request_type']) . ") from " . $req['requester_name'] . " has been resubmitted and is back for your review.";
+
+                foreach ($recipients as $uid) {
+                    $nt = $this->pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                    $nt->execute([$uid, $ntTitle, $ntMsg, $request_id]);
+                }
+            }
+        } catch (PDOException $e) {
+            error_log('Failed to notify resubmission: ' . $e->getMessage());
+        }
+    }
+
+    private function notify_next_in_flow($request_id, $current_role_id, $remark) {
+        try {
+            $stmtReq = $this->pdo->prepare("SELECT r.*, u.fullname as requester_name, u.department FROM requests r JOIN users u ON r.user_id = u.user_id WHERE r.request_id = ?");
+            $stmtReq->execute([$request_id]);
+            $req = $stmtReq->fetch(PDO::FETCH_ASSOC);
+            if (!$req) return;
+
+            $flow = [3, 2, 6, 5, 4];
+            $currentIndex = array_search($current_role_id, $flow);
+            if ($currentIndex === false || $currentIndex >= count($flow) - 1) return;
+
+            $nextRole = $flow[$currentIndex + 1];
+            $roleNames = [3 => 'HOD', 2 => 'HRM', 6 => 'Internal Auditor', 5 => 'Finance', 4 => 'CEO'];
+            $roleName = $roleNames[$current_role_id] ?? 'Manager';
+            $nextRoleName = $roleNames[$nextRole] ?? 'Manager';
+
+            $recipients = [];
+            if ($nextRole == 3) { // HOD
+                $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = 3 AND department = ?");
+                $st->execute([$req['department']]);
+            } else {
+                $st = $this->pdo->prepare("SELECT user_id FROM users WHERE role_id = ?");
+                $st->execute([$nextRole]);
+            }
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) $recipients[] = $u['user_id'];
+
+            $ntTitle = "Action Required: Request #" . $request_id;
+            $ntMsg = "Request (" . ($req['title'] ?? $req['request_type']) . ") from " . $req['requester_name'] . " has been approved by " . $roleName . " and is now pending your review.";
+            if (!empty($remark)) $ntMsg .= " Previous Remark: " . $remark;
+
+            foreach ($recipients as $uid) {
+                $nt = $this->pdo->prepare("INSERT INTO notifications (user_id, title, message, request_id) VALUES (?, ?, ?, ?)");
+                $nt->execute([$uid, $ntTitle, $ntMsg, $request_id]);
+            }
+        } catch (PDOException $e) {
+            error_log('Failed to notify next in flow: ' . $e->getMessage());
         }
     }
     
