@@ -1072,6 +1072,23 @@ switch ($action) {
         // Include the admin management dashboard.
         include __DIR__ . '/admin_management.php';
         break;
+    
+    case 'settings':
+        // Redirect to unified admin management settings tab
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    
+    case 'settings_test':
+        include __DIR__ . '/settings_test.php';
+        break;
+    
+    case 'settings_simple':
+        include __DIR__ . '/settings_simple.php';
+        break;
+    
+    case 'settings_basic':
+        include __DIR__ . '/settings_basic.php';
+        break;
 
     case 'select_voucher_type':
         // Define constant to prevent direct file access

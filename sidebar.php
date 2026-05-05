@@ -6,8 +6,22 @@ $isActive = function($actions) use ($current_action) {
     if (!is_array($actions)) $actions = [$actions];
     return in_array($current_action, $actions, true);
 };
+
+$roleLabel = trim((string)($user['role_name'] ?? ''));
+if ($roleLabel === '') {
+    $roleMap = [
+        1 => 'Employee',
+        2 => 'HRM',
+        3 => 'HOD',
+        4 => 'CEO',
+        5 => 'Finance',
+        6 => 'Internal Auditor',
+        7 => 'Administrator',
+    ];
+    $roleLabel = $roleMap[(int)($user['role_id'] ?? 0)] ?? 'User';
+}
 ?>
-<aside class="w-72 min-h-screen p-6 hidden md:flex flex-col fixed left-0 top-0 z-30 bg-white border-r border-gray-100 shadow-sm transition-all duration-300 ease-in-out overflow-y-auto">
+<aside class="w-72 h-screen p-6 hidden lg:flex flex-col fixed left-0 top-0 z-40 bg-white border-r border-gray-100 shadow-sm transition-all duration-300 ease-in-out overflow-y-auto">
     <!-- Sidebar Header -->
     <div class="mb-10 px-2">
         <div class="flex items-center gap-3 group cursor-pointer">
@@ -86,27 +100,6 @@ $isActive = function($actions) use ($current_action) {
         </a>
         <?php endif; ?>
         
-        <?php if (in_array($user['role_id'], [7])): ?>
-        <div class="px-3 pt-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Administration</div>
-        <a href="index.php?action=admin_management" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 
-            <?= $current_action === 'admin_management' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                : 'hover:bg-slate-50 text-slate-600 hover:text-blue-600' ?>">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300
-                    <?= $current_action === 'admin_management' ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-blue-100 group-hover:text-blue-600' ?>">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37A1.724 1.724 0 001.518 4.657a1.724 1.724 0 00-1.066 2.573c-.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 3.572-1.066.756-3.35.756-3.35 0-1.756-2.924-1.756z" />
-                    </svg>
-                </div>
-                <span class="font-bold tracking-wide">Admin Management</span>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-        </a>
-        <?php endif; ?>
-        
         <div class="px-3 pt-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Activity</div>
         <a href="index.php?action=request_history" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 
             <?= $current_action === 'request_history' 
@@ -144,14 +137,15 @@ $isActive = function($actions) use ($current_action) {
             </svg>
         </a>
         
-        <?php if (in_array($user['role_id'], [7])): ?>
-        <a href="index.php?action=settings" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 
-            <?= $current_action === 'settings' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                : 'hover:bg-slate-50 text-slate-600 hover:text-blue-600' ?>">
+        <?php if (in_array($user['role_id'], [7])): // Only show settings to Admin ?>
+        <div class="px-3 pt-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">System</div>
+        <a href="index.php?action=admin_management&tab=settings" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 
+            <?= ($current_action === 'admin_management' && ($_GET['tab'] ?? '') === 'settings') 
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-200' 
+                : 'hover:bg-slate-50 text-slate-600 hover:text-purple-600' ?>">
             <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300
-                    <?= $current_action === 'settings' ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-blue-100 group-hover:text-blue-600' ?>">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300
+                    <?= ($current_action === 'admin_management' && ($_GET['tab'] ?? '') === 'settings') ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-purple-100 group-hover:text-purple-600' ?>">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37A1.724 1.724 0 001.518 4.657a1.724 1.724 0 00-1.066 2.573c-.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 3.572-1.066.756-3.35.756-3.35 0-1.756-2.924-1.756z" />
                     </svg>
@@ -173,8 +167,8 @@ $isActive = function($actions) use ($current_action) {
                     <?= strtoupper(substr($user['fullname'], 0, 1)) ?>
                 </div>
                 <div class="flex flex-col min-w-0">
-                    <span class="text-sm font-black text-slate-800 truncate"><?= htmlspecialchars($user['fullname']) ?></span>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight"><?= htmlspecialchars($user['role_name'] ?? 'Employee') ?></span>
+                    <span class="text-sm font-black text-slate-800 truncate"><?= htmlspecialchars($roleLabel) ?></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight"><?= htmlspecialchars($user['fullname'] ?? 'User') ?></span>
                 </div>
             </div>
         </div>

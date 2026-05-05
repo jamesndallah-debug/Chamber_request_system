@@ -184,9 +184,9 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
     <?php endif; ?>
     
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col <?= empty($hide_sidebar) ? 'ml-72' : '' ?>">
+    <div class="flex-1 flex flex-col <?= empty($hide_sidebar) ? 'md:ml-72' : '' ?>">
         <!-- Top Nav -->
-        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 <?= empty($hide_sidebar) ? 'left-72' : 'left-0' ?> right-0 z-40 bg-white/90">
+        <header class="glass header-pulse shadow p-6 flex items-center justify-between fixed top-0 <?= empty($hide_sidebar) ? 'left-0 md:left-72' : 'left-0' ?> right-0 z-40 bg-white/90">
             <div class="flex items-center gap-4">
                 <?php if (!empty($hide_sidebar)): ?>
                 <a href="index.php?action=dashboard" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -252,16 +252,16 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                 <a href="index.php?action=leave_balances" class="btn btn-secondary">Leave Balances</a>
             </div>
         </header>
-        <div class="glass px-4 py-3 fixed top-24 left-72 right-0 z-30 bg-white/80">
+        <div class="glass px-4 py-3 fixed top-24 <?= empty($hide_sidebar) ? 'left-0 md:left-72' : 'left-0' ?> right-0 z-30 bg-white/80">
             <div class="marquee text-gray-800 text-base">
                 <span>Welcome <?= e($user['fullname']) ?> — Wishing you a productive day at the Chamber! ✨ Empowering businesses across Tanzania and Africa 💙💛💚 • </span>
             </div>
         </div>
 
         <!-- Main Content Area -->
-        <main class="flex-1 p-6 pt-40 mt-12 bg-gray-50">
+        <main class="flex-1 p-4 sm:p-6 pt-44 md:pt-40 mt-0 bg-gray-50">
             
-            <div class="glass p-6 rounded-xl bg-white border border-gray-200 shadow-sm">
+            <div class="glass p-4 sm:p-6 rounded-xl bg-white border border-gray-200 shadow-sm max-w-full">
                 <?php if (!empty($notifications) && $unreadCount > 0): ?>
                 <div class="mb-6">
                     <h2 class="text-lg font-bold mb-2 text-gray-800">New Notifications (<?= $unreadCount ?>)</h2>
