@@ -956,7 +956,7 @@ switch ($action) {
             if ($request_id && $status) {
                 $request = $requestModel->get_request_by_id($request_id);
                 if ($request && can_approve($user['role_id'], $request)) {
-                    $result = $requestModel->update_status($request_id, $user['role_id'], $status, $remark);
+                    $result = $requestModel->update_status($request_id, $user['role_id'], $status, $remark, $user['user_id']);
                     if ($result) {
                         // Trigger confetti on next page load when CEO gives final approval
                         if ((int)$user['role_id'] === 4 && $status === 'approved') {
