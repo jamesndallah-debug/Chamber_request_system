@@ -219,7 +219,7 @@ $page_title = 'Vouchers Management';
         
         .search-container input {
             width: 100%;
-            padding: 0.75rem 1rem 0.75rem 3rem;
+            padding: 0.75rem 3rem 0.75rem 1rem;
             background: white;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
@@ -236,7 +236,7 @@ $page_title = 'Vouchers Management';
         
         .search-container .search-icon {
             position: absolute;
-            left: 1rem;
+            right: 1rem;
             top: 50%;
             transform: translateY(-50%);
             color: #9ca3af;

@@ -115,11 +115,12 @@ foreach ($vouchers as $voucher) {
             position: relative;
         }
         .search-container input {
-            padding-left: 40px;
+            padding-right: 40px;
+            padding-left: 1rem;
         }
         .search-container svg {
             position: absolute;
-            left: 12px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             color: #64748b;
