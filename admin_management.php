@@ -460,7 +460,7 @@ try {
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
                                         <?php if ($hasActive): ?>
-                                            <?php if ((int)$u['active']): ?>
+                                            <?php if ((int)($u['active'] ?? $u['is_active'] ?? 1)): ?>
                                                 <button type="submit" name="admin_user_action" value="deactivate" class="text-gray-400 hover:text-amber-600 transition">🚫</button>
                                             <?php else: ?>
                                                 <button type="submit" name="admin_user_action" value="activate" class="text-gray-400 hover:text-green-600 transition">✅</button>
