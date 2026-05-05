@@ -78,7 +78,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Role management
+    // Directorate management - Update
+    if (isset($_POST['edit_directorate_id'])) {
+        $id = (int)$_POST['edit_directorate_id'];
+        $name = trim($_POST['directorate_name'] ?? '');
+        if ($id > 0 && $name !== '') {
+            try {
+                $stmt = $pdo->prepare("UPDATE directorates SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$name, $id]);
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate updated successfully.'];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Update failed: ' . $e->getMessage()];
+            }
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Directorate management - Activate
+    if (isset($_POST['activate_directorate_id'])) {
+        $id = (int)$_POST['activate_directorate_id'];
+        try {
+            $stmt = $pdo->prepare("UPDATE directorates SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate activated.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to activate.'];
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Directorate management - Deactivate
+    if (isset($_POST['deactivate_directorate_id'])) {
+        $id = (int)$_POST['deactivate_directorate_id'];
+        try {
+            $stmt = $pdo->prepare("UPDATE directorates SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate deactivated.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to deactivate.'];
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Directorate management - Delete
+    if (isset($_POST['delete_directorate_id'])) {
+        $id = (int)$_POST['delete_directorate_id'];
+        try {
+            // Check for users in this directorate
+            $check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE directorate = (SELECT name FROM directorates WHERE id = ?) AND deleted_at IS NULL");
+            $check->execute([$id]);
+            if ((int)$check->fetchColumn() > 0) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cannot delete directorate with assigned users.'];
+            } else {
+                $stmt = $pdo->prepare("DELETE FROM directorates WHERE id = ?");
+                $stmt->execute([$id]);
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate removed.'];
+            }
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Deletion failed.'];
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Role management - Add
     if (isset($_POST['add_role'])) {
         $name = trim($_POST['role_name'] ?? '');
         if ($name !== '') {
@@ -91,6 +157,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Role management - Update
+    if (isset($_POST['edit_role_id'])) {
+        $id = (int)$_POST['edit_role_id'];
+        $name = trim($_POST['role_name'] ?? '');
+        if ($id > 0 && $name !== '') {
+            try {
+                $stmt = $pdo->prepare("UPDATE roles SET role_name = ?, updated_at = CURRENT_TIMESTAMP WHERE role_id = ?");
+                $stmt->execute([$name, $id]);
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'System role updated.'];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Update failed.'];
+            }
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Role management - Activate
+    if (isset($_POST['activate_role_id'])) {
+        $id = (int)$_POST['activate_role_id'];
+        try {
+            $stmt = $pdo->prepare("UPDATE roles SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE role_id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'System role activated.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to activate.'];
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Role management - Deactivate
+    if (isset($_POST['deactivate_role_id'])) {
+        $id = (int)$_POST['deactivate_role_id'];
+        try {
+            $stmt = $pdo->prepare("UPDATE roles SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE role_id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'System role deactivated.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to deactivate.'];
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Role management - Delete
+    if (isset($_POST['delete_role_id'])) {
+        $id = (int)$_POST['delete_role_id'];
+        try {
+            // Check for users in this role
+            $check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role_id = ? AND deleted_at IS NULL");
+            $check->execute([$id]);
+            if ((int)$check->fetchColumn() > 0) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cannot delete role with assigned users.'];
+            } else {
+                $stmt = $pdo->prepare("DELETE FROM roles WHERE role_id = ?");
+                $stmt->execute([$id]);
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Role deleted.'];
+            }
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Deletion failed.'];
+        }
+        header('Location: index.php?action=admin_management&tab=settings');
+        exit;
+    }
+
+    // Messaging
+    if (isset($_POST['admin_send_message'])) {
+        $to_id = (int)$_POST['message_user_id'];
+        $subject = trim($_POST['message_subject'] ?? '');
+        $content = trim($_POST['message_content'] ?? '');
+        if ($to_id && $subject && $content) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO user_messages (from_user_id, to_user_id, subject, message, is_private, created_at) VALUES (?, ?, ?, ?, 1, NOW())");
+                if ($stmt->execute([$user['user_id'], $to_id, $subject, $content])) {
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Message transmitted successfully.'];
+                }
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Transmission failed.'];
+            }
+        }
+        header('Location: index.php?action=admin_management');
         exit;
     }
 
@@ -248,7 +399,10 @@ try {
             <!-- Tab: Users -->
             <div id="tab-users" class="tab-content space-y-6">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-black text-slate-900">User Management</h2>
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-xl font-black text-slate-900">User Management</h2>
+                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-wider">Total: <?= count($users_list) ?></span>
+                    </div>
                     <button onclick="toggleModal('modal-create-user')" class="btn-primary">
                         <span>➕</span> Create User
                     </button>
@@ -364,8 +518,9 @@ try {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <!-- Directorates -->
                     <div class="card overflow-hidden">
-                        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Managed Directorates</h3>
+                            <span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-black rounded-md uppercase tracking-tighter">Count: <?= count($directorates) ?></span>
                         </div>
                         <div class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
                             <?php foreach ($directorates as $d): ?>
@@ -377,11 +532,21 @@ try {
                                     </p>
                                 </div>
                                 <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onclick="editDirectorate(<?= $d['id'] ?>, '<?= addslashes($d['name']) ?>')" class="p-2 hover:bg-slate-100 rounded-lg">✏️</button>
+                                    <button onclick="editDirectorate(<?= $d['id'] ?>, '<?= addslashes($d['name']) ?>')" class="p-2 hover:bg-slate-100 rounded-lg" title="Edit">✏️</button>
+                                    <form method="POST" class="inline">
+                                        <?= csrf_field() ?>
+                                        <?php if ($d['is_active'] ?? 1): ?>
+                                            <input type="hidden" name="deactivate_directorate_id" value="<?= $d['id'] ?>">
+                                            <button type="submit" class="p-2 hover:bg-amber-50 text-amber-500 rounded-lg" title="Deactivate">🚫</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="activate_directorate_id" value="<?= $d['id'] ?>">
+                                            <button type="submit" class="p-2 hover:bg-emerald-50 text-emerald-500 rounded-lg" title="Activate">✅</button>
+                                        <?php endif; ?>
+                                    </form>
                                     <form method="POST" class="inline">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="delete_directorate_id" value="<?= $d['id'] ?>">
-                                        <button type="submit" class="p-2 hover:bg-rose-50 text-rose-500 rounded-lg">🗑️</button>
+                                        <button type="submit" onclick="return confirm('Delete directorate?')" class="p-2 hover:bg-rose-50 text-rose-500 rounded-lg" title="Delete">🗑️</button>
                                     </form>
                                 </div>
                             </div>
@@ -391,8 +556,9 @@ try {
 
                     <!-- Roles -->
                     <div class="card overflow-hidden">
-                        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Access Roles</h3>
+                            <span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-black rounded-md uppercase tracking-tighter">Count: <?= count($roles_list) ?></span>
                         </div>
                         <div class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
                             <?php foreach ($roles_list as $r): ?>
@@ -404,11 +570,21 @@ try {
                                     </p>
                                 </div>
                                 <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onclick="editRole(<?= $r['role_id'] ?>, '<?= addslashes($r['role_name']) ?>')" class="p-2 hover:bg-slate-100 rounded-lg">✏️</button>
+                                    <button onclick="editRole(<?= $r['role_id'] ?>, '<?= addslashes($r['role_name']) ?>')" class="p-2 hover:bg-slate-100 rounded-lg" title="Edit">✏️</button>
+                                    <form method="POST" class="inline">
+                                        <?= csrf_field() ?>
+                                        <?php if ($r['is_active'] ?? 1): ?>
+                                            <input type="hidden" name="deactivate_role_id" value="<?= $r['role_id'] ?>">
+                                            <button type="submit" class="p-2 hover:bg-amber-50 text-amber-600 rounded-lg" title="Deactivate">🚫</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="activate_role_id" value="<?= $r['role_id'] ?>">
+                                            <button type="submit" class="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg" title="Activate">✅</button>
+                                        <?php endif; ?>
+                                    </form>
                                     <form method="POST" class="inline">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="delete_role_id" value="<?= $r['role_id'] ?>">
-                                        <button type="submit" class="p-2 hover:bg-rose-50 text-rose-500 rounded-lg">🗑️</button>
+                                        <button type="submit" onclick="return confirm('Delete role?')" class="p-2 hover:bg-rose-50 text-rose-500 rounded-lg" title="Delete">🗑️</button>
                                     </form>
                                 </div>
                             </div>

@@ -979,97 +979,10 @@ switch ($action) {
     
     case 'admin_management':
         // Check if the user is an admin (role_id 7).
-        if ($user['role_id'] != 7) {
+        if (!$user || (int)$user['role_id'] !== 7) {
             header('Location: index.php?action=dashboard');
             exit;
         }
-        // If this is a directorate/role settings POST, let admin_management.php handle it.
-        $settingsPost =
-            isset($_POST['add_directorate']) ||
-            isset($_POST['edit_directorate_id']) ||
-            isset($_POST['activate_directorate_id']) ||
-            isset($_POST['deactivate_directorate_id']) ||
-            isset($_POST['delete_directorate_id']) ||
-            isset($_POST['add_role']) ||
-            isset($_POST['edit_role_id']) ||
-            isset($_POST['activate_role_id']) ||
-            isset($_POST['deactivate_role_id']) ||
-            isset($_POST['delete_role_id']);
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $settingsPost) {
-            include __DIR__ . '/admin_management.php';
-            break;
-        }
-        // Handle admin POST actions for user management
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            require_csrf_post();
-            try {
-                if (isset($_POST['admin_create_user'])) {
-                    $fullname = trim($_POST['fullname'] ?? '');
-                    $username = trim($_POST['username'] ?? '');
-                    $password = (string)($_POST['password'] ?? '');
-                    $department = (string)($_POST['department'] ?? '');
-                    $directorate = trim($_POST['directorate'] ?? '');
-                    $role_id = (int)($_POST['role_id'] ?? 0);
-
-                    if ($fullname === '' || $username === '' || $password === '' || $department === '' || $directorate === '' || $role_id <= 0) {
-                        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Please fill all fields.'];
-                    } else {
-                        $check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
-                        $check->execute([$username]);
-                        if ((int)$check->fetchColumn() > 0) {
-                            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Username already exists.'];
-                        } else {
-                            $hash = password_hash($password, PASSWORD_BCRYPT);
-                            $stmt = $pdo->prepare("INSERT INTO users (fullname, username, password, department, directorate, role_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-                            $ok = $stmt->execute([$fullname, $username, $hash, $department, $directorate, $role_id]);
-                            $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User created successfully!' : 'Failed to create user.'];
-                        }
-                    }
-                } else if (isset($_POST['admin_deactivate_user'])) {
-                    $uid = (int)($_POST['user_id'] ?? 0);
-                    if ($uid && $uid !== (int)$user['user_id']) {
-                        $stmt = $pdo->prepare("UPDATE users SET active = 0 WHERE user_id = ?");
-                        $ok = $stmt->execute([$uid]);
-                        $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User deactivated.' : 'Failed to deactivate user.'];
-                    }
-                } else if (isset($_POST['admin_activate_user'])) {
-                    $uid = (int)($_POST['user_id'] ?? 0);
-                    if ($uid && $uid !== (int)$user['user_id']) {
-                        $stmt = $pdo->prepare("UPDATE users SET active = 1 WHERE user_id = ? AND deleted_at IS NULL");
-                        $ok = $stmt->execute([$uid]);
-                        $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User activated.' : 'Failed to activate user.'];
-                    }
-                } else if (isset($_POST['admin_delete_user'])) {
-                    $uid = (int)($_POST['user_id'] ?? 0);
-                    if ($uid && $uid !== (int)$user['user_id']) {
-                        $stmt = $pdo->prepare("UPDATE users SET active = 0, deleted_at = NOW() WHERE user_id = ?");
-                        $ok = $stmt->execute([$uid]);
-                        $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User deleted.' : 'Failed to delete user.'];
-                    }
-                } else if (isset($_POST['admin_hard_delete_user'])) {
-                    $uid = (int)($_POST['user_id'] ?? 0);
-                    if ($uid && $uid !== (int)$user['user_id']) {
-                        $check = $pdo->prepare("SELECT deleted_at FROM users WHERE user_id = ?");
-                        $check->execute([$uid]);
-                        if ($check->fetchColumn()) {
-                            $del = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
-                            $ok = $del->execute([$uid]);
-                            $_SESSION['flash'] = ['type' => $ok ? 'success' : 'error', 'message' => $ok ? 'User permanently removed.' : 'Failed to permanently delete user.'];
-                        } else {
-                            $_SESSION['flash'] = ['type' => 'error', 'message' => 'User must be soft-deleted before permanent removal.'];
-                        }
-                    }
-                } else if (isset($_POST['admin_broadcast'])) {
-                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Announcement sent.'];
-                }
-            } catch (Throwable $e) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Admin action failed.'];
-            }
-            header('Location: index.php?action=admin_management&tab=' . urlencode($_GET['tab'] ?? 'users'));
-            exit;
-        }
-        // Include the admin management dashboard.
         include __DIR__ . '/admin_management.php';
         break;
     
