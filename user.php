@@ -97,11 +97,45 @@ class UserModel {
      */
     public function deactivate_user($user_id) {
         try {
-            $sql = "UPDATE users SET is_active = 0 WHERE user_id = ?";
+            $sql = "UPDATE users SET active = 0, is_active = 0 WHERE user_id = ?";
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute([$user_id]);
         } catch (PDOException $e) {
             error_log("Error deactivating user: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Activate a user
+     * 
+     * @param int $user_id User ID
+     * @return bool Success or failure
+     */
+    public function activate_user($user_id) {
+        try {
+            $sql = "UPDATE users SET active = 1, is_active = 1 WHERE user_id = ?";
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute([$user_id]);
+        } catch (PDOException $e) {
+            error_log("Error activating user: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Soft delete a user
+     * 
+     * @param int $user_id User ID
+     * @return bool Success or failure
+     */
+    public function delete_user($user_id) {
+        try {
+            $sql = "UPDATE users SET active = 0, is_active = 0, deleted_at = NOW() WHERE user_id = ?";
+            $stmt = $this->pdo->prepare($sql);
+            return $stmt->execute([$user_id]);
+        } catch (PDOException $e) {
+            error_log("Error deleting user: " . $e->getMessage());
             return false;
         }
     }

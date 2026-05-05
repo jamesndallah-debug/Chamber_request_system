@@ -1,6 +1,6 @@
 <?php
 // FILE: admin_management.php
-// Modern Admin Dashboard for Chamber Request System
+// Modern & High-Standard Admin Dashboard for Chamber Request System
 
 if (!defined('ACCESS_ALLOWED')) {
     die('Direct access not allowed');
@@ -15,171 +15,80 @@ if (!$user || (int)$user['role_id'] !== 7) {
 // Handle POST requests for admin actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf_post();
+    
+    // User status actions (Activate/Deactivate/Delete)
+    if (isset($_POST['admin_user_action'])) {
+        $user_id = (int)$_POST['user_id'];
+        $action = $_POST['admin_user_action'];
+        
+        if ($user_id && $user_id != $user['user_id']) {
+            try {
+                if ($action === 'deactivate') {
+                    $stmt = $pdo->prepare("UPDATE users SET active = 0, is_active = 0 WHERE user_id = ?");
+                    $stmt->execute([$user_id]);
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'User account has been successfully deactivated.'];
+                } elseif ($action === 'activate') {
+                    $stmt = $pdo->prepare("UPDATE users SET active = 1, is_active = 1 WHERE user_id = ?");
+                    $stmt->execute([$user_id]);
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'User account has been successfully reactivated.'];
+                } elseif ($action === 'delete') {
+                    // Check for history
+                    $hasHistory = false;
+                    $tablesToCheck = ['requests' => 'user_id', 'vouchers' => 'prepared_by', 'user_messages' => 'from_user_id'];
+                    foreach ($tablesToCheck as $tbl => $col) {
+                        $chk = $pdo->prepare("SELECT COUNT(*) FROM $tbl WHERE $col = ?");
+                        $chk->execute([$user_id]);
+                        if ((int)$chk->fetchColumn() > 0) {
+                            $hasHistory = true;
+                            break;
+                        }
+                    }
 
-    // Directorate + Role management (Settings tab)
+                    if ($hasHistory) {
+                        $stmt = $pdo->prepare("UPDATE users SET active = 0, is_active = 0, deleted_at = NOW() WHERE user_id = ?");
+                        $stmt->execute([$user_id]);
+                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User has history and was soft-deleted to preserve records.'];
+                    } else {
+                        $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
+                        $stmt->execute([$user_id]);
+                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User has been permanently deleted from the system.'];
+                    }
+                }
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Action failed: ' . $e->getMessage()];
+            }
+        }
+        header('Location: index.php?action=admin_management');
+        exit;
+    }
+
+    // Directorate management
     if (isset($_POST['add_directorate'])) {
         $name = trim($_POST['directorate_name'] ?? '');
-        try {
-            if ($name !== '') {
+        if ($name !== '') {
+            try {
                 $stmt = $pdo->prepare("INSERT INTO directorates (name) VALUES (?)");
                 $stmt->execute([$name]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate added successfully!'];
-            } else {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Directorate name is required.'];
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'New directorate added successfully.'];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to add directorate: ' . $e->getMessage()];
             }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error adding directorate: ' . $e->getMessage()];
         }
         header('Location: index.php?action=admin_management&tab=settings');
         exit;
     }
 
-    if (isset($_POST['edit_directorate_id'])) {
-        $id = (int)($_POST['edit_directorate_id'] ?? 0);
-        $name = trim($_POST['directorate_name'] ?? '');
-        try {
-            if ($id > 0 && $name !== '') {
-                $stmt = $pdo->prepare("UPDATE directorates SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmt->execute([$name, $id]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate updated successfully!'];
-            } else {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Invalid directorate data.'];
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error updating directorate: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['activate_directorate_id'])) {
-        $id = (int)($_POST['activate_directorate_id'] ?? 0);
-        try {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE directorates SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmt->execute([$id]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate activated successfully!'];
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error activating directorate: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['deactivate_directorate_id'])) {
-        $id = (int)($_POST['deactivate_directorate_id'] ?? 0);
-        try {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE directorates SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmt->execute([$id]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate deactivated successfully!'];
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error deactivating directorate: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['delete_directorate_id'])) {
-        $id = (int)($_POST['delete_directorate_id'] ?? 0);
-        try {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE directorate = (SELECT name FROM directorates WHERE id = ?) AND deleted_at IS NULL");
-                $stmt->execute([$id]);
-                if ((int)$stmt->fetchColumn() > 0) {
-                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cannot delete directorate while users are assigned to it.'];
-                } else {
-                    $stmt = $pdo->prepare("DELETE FROM directorates WHERE id = ?");
-                    $stmt->execute([$id]);
-                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Directorate deleted successfully!'];
-                }
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error deleting directorate: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
+    // Role management
     if (isset($_POST['add_role'])) {
         $name = trim($_POST['role_name'] ?? '');
-        try {
-            if ($name !== '') {
+        if ($name !== '') {
+            try {
                 $stmt = $pdo->prepare("INSERT INTO roles (role_name) VALUES (?)");
                 $stmt->execute([$name]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Role added successfully!'];
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'New system role added successfully.'];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to add role: ' . $e->getMessage()];
             }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error adding role: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['edit_role_id'])) {
-        $id = (int)($_POST['edit_role_id'] ?? 0);
-        $name = trim($_POST['role_name'] ?? '');
-        try {
-            if ($id > 0 && $name !== '') {
-                $stmt = $pdo->prepare("UPDATE roles SET role_name = ?, updated_at = CURRENT_TIMESTAMP WHERE role_id = ?");
-                $stmt->execute([$name, $id]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Role updated successfully!'];
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error updating role: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['activate_role_id'])) {
-        $id = (int)($_POST['activate_role_id'] ?? 0);
-        try {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE roles SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE role_id = ?");
-                $stmt->execute([$id]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Role activated successfully!'];
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error activating role: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['deactivate_role_id'])) {
-        $id = (int)($_POST['deactivate_role_id'] ?? 0);
-        try {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE roles SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE role_id = ?");
-                $stmt->execute([$id]);
-                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Role deactivated successfully!'];
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error deactivating role: ' . $e->getMessage()];
-        }
-        header('Location: index.php?action=admin_management&tab=settings');
-        exit;
-    }
-
-    if (isset($_POST['delete_role_id'])) {
-        $id = (int)($_POST['delete_role_id'] ?? 0);
-        try {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role_id = ? AND deleted_at IS NULL");
-                $stmt->execute([$id]);
-                if ((int)$stmt->fetchColumn() > 0) {
-                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cannot delete role while users are assigned to it.'];
-                } else {
-                    $stmt = $pdo->prepare("DELETE FROM roles WHERE role_id = ?");
-                    $stmt->execute([$id]);
-                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Role deleted successfully!'];
-                }
-            }
-        } catch (Exception $e) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error deleting role: ' . $e->getMessage()];
         }
         header('Location: index.php?action=admin_management&tab=settings');
         exit;
@@ -193,92 +102,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $directorate = trim($_POST['directorate'] ?? '');
         $role_id = (int)($_POST['role_id'] ?? 0);
         
-        // Since department is removed from form, we use directorate as department
-        $department = $directorate;
-        
         if ($fullname && $username && $password && $directorate && $role_id) {
             try {
                 $check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
                 $check->execute([$username]);
-                if ($check->fetchColumn() == 0) {
+                if ((int)$check->fetchColumn() === 0) {
                     $hash = password_hash($password, PASSWORD_BCRYPT);
-                    $stmt = $pdo->prepare("INSERT INTO users (fullname, username, password, department, directorate, role_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-                    if ($stmt->execute([$fullname, $username, $hash, $department, $directorate, $role_id])) {
-                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User created successfully!'];
+                    $stmt = $pdo->prepare("INSERT INTO users (fullname, username, password, department, directorate, role_id, active, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, 1, NOW())");
+                    if ($stmt->execute([$fullname, $username, $hash, $directorate, $directorate, $role_id])) {
+                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User account created successfully.'];
                     }
                 } else {
-                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Username already exists.'];
+                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error: Username already exists.'];
                 }
             } catch (Exception $e) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error creating user: ' . $e->getMessage()];
-            }
-        }
-        header('Location: index.php?action=admin_management');
-        exit;
-    }
-    
-    // User status actions (Activate/Deactivate/Delete)
-    if (isset($_POST['admin_user_action'])) {
-        $user_id = (int)$_POST['user_id'];
-        $action = $_POST['admin_user_action'];
-        if ($user_id && $user_id != $user['user_id']) {
-            try {
-                if ($action === 'deactivate') {
-                    // Update both possible status columns for compatibility
-                    $stmt = $pdo->prepare("UPDATE users SET active = 0, is_active = 0 WHERE user_id = ?");
-                    $stmt->execute([$user_id]);
-                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'User deactivated.'];
-                } elseif ($action === 'activate') {
-                    $stmt = $pdo->prepare("UPDATE users SET active = 1, is_active = 1 WHERE user_id = ?");
-                    $stmt->execute([$user_id]);
-                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'User activated.'];
-                } elseif ($action === 'delete') {
-                    // Check for associated requests or vouchers first
-                    $hasHistory = false;
-                    
-                    $checkReq = $pdo->prepare("SELECT COUNT(*) FROM requests WHERE user_id = ?");
-                    $checkReq->execute([$user_id]);
-                    if ($checkReq->fetchColumn() > 0) $hasHistory = true;
-                    
-                    if (!$hasHistory) {
-                        $checkVou = $pdo->prepare("SELECT COUNT(*) FROM vouchers WHERE prepared_by = ?");
-                        $checkVou->execute([$user_id]);
-                        if ($checkVou->fetchColumn() > 0) $hasHistory = true;
-                    }
-
-                    if ($hasHistory) {
-                        // Has history, use soft delete
-                        $stmt = $pdo->prepare("UPDATE users SET active = 0, is_active = 0, deleted_at = NOW() WHERE user_id = ?");
-                        $stmt->execute([$user_id]);
-                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User has history, so they were soft-deleted (deactivated and hidden).'];
-                    } else {
-                        // No history, safe to hard delete
-                        $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
-                        $stmt->execute([$user_id]);
-                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'User deleted permanently.'];
-                    }
-                }
-            } catch (Exception $e) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
-            }
-        }
-        header('Location: index.php?action=admin_management');
-        exit;
-    }
-
-    // Messaging
-    if (isset($_POST['admin_send_message'])) {
-        $to_id = (int)$_POST['message_user_id'];
-        $subject = trim($_POST['message_subject']);
-        $content = trim($_POST['message_content']);
-        if ($to_id && $subject && $content) {
-            try {
-                $stmt = $pdo->prepare("INSERT INTO user_messages (from_user_id, to_user_id, subject, message, is_private) VALUES (?, ?, ?, ?, 1)");
-                if ($stmt->execute([$user['user_id'], $to_id, $subject, $content])) {
-                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Message sent successfully.'];
-                }
-            } catch (Exception $e) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'System error: ' . $e->getMessage()];
             }
         }
         header('Location: index.php?action=admin_management');
@@ -286,27 +124,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch stats & data
+// Fetch Data for Display
 try {
-    // Check if deleted_at exists in users table
     $hasDeletedAt = false;
-    try {
-        $pdo->query("SELECT deleted_at FROM users LIMIT 1");
-        $hasDeletedAt = true;
-    } catch (Exception $e) {}
-
-    // Check if active exists
-    $hasActive = false;
-    try {
-        $pdo->query("SELECT active FROM users LIMIT 1");
-        $hasActive = true;
-    } catch (Exception $e) {}
-
+    try { $pdo->query("SELECT deleted_at FROM users LIMIT 1"); $hasDeletedAt = true; } catch (Exception $e) {}
+    
     $userWhere = $hasDeletedAt ? "WHERE u.deleted_at IS NULL" : "WHERE 1=1";
-    $userCountQuery = $hasDeletedAt ? "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL" : "SELECT COUNT(*) FROM users";
-
+    
     $stats = [
-        'total_users' => (int)$pdo->query($userCountQuery)->fetchColumn(),
+        'total_users' => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL")->fetchColumn(),
         'total_requests' => (int)$pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn(),
         'pending_requests' => (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE ed_status = 'pending' AND hod_status != 'rejected'")->fetchColumn(),
         'approved_requests' => (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE ed_status = 'approved'")->fetchColumn()
@@ -320,12 +146,15 @@ try {
                                     FROM requests r LEFT JOIN users u ON r.user_id = u.user_id
                                     LEFT JOIN request_statuses rs ON r.status_id = rs.status_id
                                     ORDER BY r.created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+                                    
+    $directorates = $pdo->query("SELECT * FROM directorates ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $roles_list = $pdo->query("SELECT * FROM roles ORDER BY role_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     error_log($e->getMessage());
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -336,358 +165,354 @@ try {
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .sidebar-link.active { background-color: #f3f4f6; color: #2563eb; }
-        .card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .btn-action { transition: all 0.2s; }
-        .btn-action:hover { transform: translateY(-1px); }
-        .modal { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+        .tab-content.active { display: block; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); transition: all 0.2s; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07); }
+        .btn-primary { background: #2563eb; color: white; padding: 0.625rem 1.25rem; border-radius: 12px; font-weight: 700; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .modal { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1.5rem; }
         .modal.show { display: flex; }
+        .form-input { width: 100%; padding: 0.75rem 1rem; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; outline: none; transition: all 0.2s; }
+        .form-input:focus { border-color: #2563eb; background: white; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+        .badge { padding: 0.375rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; }
+        .badge-success { background: #f0fdf4; color: #166534; }
+        .badge-danger { background: #fef2f2; color: #991b1b; }
+        .badge-warning { background: #fffbeb; color: #92400e; }
     </style>
 </head>
-<body class="h-full overflow-hidden flex">
+<body class="h-full flex overflow-hidden">
 
-    <!-- Sidebar -->
+    <!-- Sidebar Integration -->
     <?php include __DIR__ . '/sidebar.php'; ?>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 lg:ml-72 flex flex-col min-w-0 overflow-hidden bg-gray-50">
+    <main class="flex-1 flex flex-col min-w-0 lg:ml-72 bg-slate-50 overflow-hidden">
         
-        <!-- Top Header -->
-        <header class="bg-white border-b border-gray-200 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+        <!-- Header -->
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 sm:px-10 py-5 flex items-center justify-between sticky top-0 z-30">
             <div>
-                <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Admin Dashboard</h1>
-                <p class="text-sm text-gray-500">System management and monitoring</p>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">System Control</h1>
+                <p class="text-sm font-medium text-slate-500">Global Administration & Oversight</p>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-right hidden sm:block">
-                    <p class="text-sm font-bold text-gray-900"><?= htmlspecialchars($user['fullname']) ?></p>
-                    <p class="text-xs text-blue-600 font-semibold uppercase">System Administrator</p>
+                    <p class="text-sm font-extrabold text-slate-900"><?= htmlspecialchars($user['fullname']) ?></p>
+                    <p class="text-[10px] text-blue-600 font-black uppercase tracking-widest">Master Admin</p>
                 </div>
-                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-200">
                     <?= substr($user['fullname'], 0, 1) ?>
                 </div>
             </div>
         </header>
 
-        <!-- Scrollable Body -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8">
+        <!-- Main Body -->
+        <div class="flex-1 overflow-y-auto p-6 sm:p-10 space-y-10">
             
             <?php if (isset($_SESSION['flash'])): $f = $_SESSION['flash']; unset($_SESSION['flash']); ?>
-                <div class="p-4 rounded-lg border <?= $f['type'] === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800' ?> flex items-center justify-between">
-                    <p class="font-medium"><?= htmlspecialchars($f['message']) ?></p>
-                    <button onclick="this.parentElement.remove()" class="text-current opacity-50 hover:opacity-100">✕</button>
+                <div class="p-4 rounded-2xl border-2 <?= $f['type'] === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800' ?> flex items-center justify-between shadow-sm animate-bounce-short">
+                    <div class="flex items-center gap-3 font-bold">
+                        <span><?= $f['type'] === 'success' ? '✅' : '❌' ?></span>
+                        <?= htmlspecialchars($f['message']) ?>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="text-current opacity-40 hover:opacity-100 transition-opacity">✕</button>
                 </div>
             <?php endif; ?>
 
-            <!-- Stats Overview -->
+            <!-- Performance Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="card p-6 border-l-4 border-blue-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Users</p>
-                    <h3 class="text-3xl font-extrabold text-gray-900"><?= $stats['total_users'] ?></h3>
+                <?php 
+                $cards = [
+                    ['Users', $stats['total_users'], '👥', 'blue'],
+                    ['Requests', $stats['total_requests'], '📋', 'indigo'],
+                    ['Pending', $stats['pending_requests'], '⏳', 'amber'],
+                    ['Success', $stats['approved_requests'], '✨', 'emerald']
+                ];
+                foreach ($cards as [$label, $val, $icon, $color]): ?>
+                <div class="card p-6 border-t-4 border-<?= $color ?>-500">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-2xl"><?= $icon ?></span>
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest"><?= $label ?></span>
+                    </div>
+                    <h3 class="text-3xl font-black text-slate-900"><?= $val ?></h3>
                 </div>
-                <div class="card p-6 border-l-4 border-indigo-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Requests</p>
-                    <h3 class="text-3xl font-extrabold text-gray-900"><?= $stats['total_requests'] ?></h3>
-                </div>
-                <div class="card p-6 border-l-4 border-amber-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pending Action</p>
-                    <h3 class="text-3xl font-extrabold text-gray-900"><?= $stats['pending_requests'] ?></h3>
-                </div>
-                <div class="card p-6 border-l-4 border-emerald-500">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Approved</p>
-                    <h3 class="text-3xl font-extrabold text-gray-900"><?= $stats['approved_requests'] ?></h3>
-                </div>
+                <?php endforeach; ?>
             </div>
 
             <!-- Tab Navigation -->
-            <div class="flex items-center gap-1 border-b border-gray-200">
-                <button onclick="switchTab('users')" data-tab-btn="users" class="px-6 py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600">Users</button>
-                <button onclick="switchTab('requests')" data-tab-btn="requests" class="px-6 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700">Requests</button>
-                <button onclick="switchTab('settings')" data-tab-btn="settings" class="px-6 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700">System Settings</button>
+            <div class="flex items-center gap-2 p-1.5 bg-slate-200/50 rounded-2xl w-fit">
+                <button onclick="switchTab('users')" data-tab-btn="users" class="px-6 py-2.5 rounded-xl text-sm font-black transition-all">Users</button>
+                <button onclick="switchTab('requests')" data-tab-btn="requests" class="px-6 py-2.5 rounded-xl text-sm font-black transition-all">Requests</button>
+                <button onclick="switchTab('settings')" data-tab-btn="settings" class="px-6 py-2.5 rounded-xl text-sm font-black transition-all">Settings</button>
             </div>
 
-            <!-- Users Tab -->
-            <div id="tab-users" class="tab-content active space-y-6">
+            <!-- Tab: Users -->
+            <div id="tab-users" class="tab-content space-y-6">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-extrabold text-gray-900">User Management</h2>
-                    <button onclick="toggleModal('modal-create-user')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm">
-                        + Create New User
+                    <h2 class="text-xl font-black text-slate-900">User Management</h2>
+                    <button onclick="toggleModal('modal-create-user')" class="btn-primary">
+                        <span>➕</span> Create User
                     </button>
                 </div>
                 
                 <div class="card overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">User</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Role / Directorate</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <?php foreach ($users_list as $u): ?>
-                            <tr class="hover:bg-gray-50/50">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500 text-xs">
-                                            <?= substr($u['fullname'], 0, 1) ?>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identification</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Operations</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <?php foreach ($users_list as $u): ?>
+                                <tr class="hover:bg-slate-50/50 transition-colors group">
+                                    <td class="px-6 py-5">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-500 text-sm group-hover:bg-white group-hover:shadow-md transition-all">
+                                                <?= substr($u['fullname'], 0, 1) ?>
+                                            </div>
+                                            <div>
+                                                <p class="font-bold text-slate-900"><?= htmlspecialchars($u['fullname']) ?></p>
+                                                <p class="text-xs font-medium text-slate-400"><?= htmlspecialchars($u['username']) ?></p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p class="font-bold text-gray-900"><?= htmlspecialchars($u['fullname']) ?></p>
-                                            <p class="text-xs text-gray-500"><?= htmlspecialchars($u['username']) ?></p>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <p class="text-sm font-bold text-slate-700"><?= htmlspecialchars($u['role_name']) ?></p>
+                                        <p class="text-[10px] font-black text-blue-500 uppercase"><?= htmlspecialchars($u['directorate']) ?></p>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <?php $isActive = (int)($u['active'] ?? $u['is_active'] ?? 1); ?>
+                                        <span class="badge <?= $isActive ? 'badge-success' : 'badge-danger' ?>">
+                                            <?= $isActive ? 'Active' : 'Deactivated' ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-5">
+                                        <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onclick="openMessageModal(<?= $u['user_id'] ?>, '<?= addslashes($u['fullname']) ?>')" class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg" title="Message">📧</button>
+                                            <?php if ($u['user_id'] != $user['user_id']): ?>
+                                                <form method="POST" class="inline">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                                    <?php if ($isActive): ?>
+                                                        <button type="submit" name="admin_user_action" value="deactivate" class="p-2 hover:bg-amber-50 text-amber-600 rounded-lg" title="Deactivate">🚫</button>
+                                                    <?php else: ?>
+                                                        <button type="submit" name="admin_user_action" value="activate" class="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg" title="Activate">✅</button>
+                                                    <?php endif; ?>
+                                                    <button type="submit" name="admin_user_action" value="delete" onclick="return confirm('WARNING: Are you sure you want to delete this user? This cannot be undone.')" class="p-2 hover:bg-rose-50 text-rose-600 rounded-lg" title="Delete">🗑️</button>
+                                                </form>
+                                            <?php endif; ?>
                                         </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <p class="text-sm font-semibold text-gray-700"><?= htmlspecialchars($u['role_name']) ?></p>
-                                    <p class="text-xs text-gray-400"><?= htmlspecialchars($u['directorate']) ?></p>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <?php if ($hasActive): ?>
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider <?= (int)($u['active'] ?? $u['is_active'] ?? 1) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' ?>">
-                                        <?= (int)($u['active'] ?? $u['is_active'] ?? 1) ? 'Active' : 'Inactive' ?>
-                                    </span>
-                                    <?php else: ?>
-                                    <span class="text-xs text-gray-400 italic">N/A</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="px-6 py-4 text-right space-x-2">
-                                    <button onclick="openMessageModal(<?= $u['user_id'] ?>, '<?= addslashes($u['fullname']) ?>')" class="text-gray-400 hover:text-blue-600 transition">📧</button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Requests -->
+            <div id="tab-requests" class="tab-content space-y-6">
+                <h2 class="text-xl font-black text-slate-900">System Activity Logs</h2>
+                <div class="card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Originator</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Classification</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Status</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Review</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <?php foreach ($recent_requests as $r): ?>
+                                <tr class="hover:bg-slate-50/50 transition-colors">
+                                    <td class="px-6 py-5 font-mono text-sm font-bold text-slate-500">REQ-<?= str_pad($r['request_id'], 5, '0', STR_PAD_LEFT) ?></td>
+                                    <td class="px-6 py-5 font-extrabold text-slate-900"><?= htmlspecialchars($r['employee_name']) ?></td>
+                                    <td class="px-6 py-5 text-sm font-medium text-slate-600"><?= htmlspecialchars($r['request_type']) ?></td>
+                                    <td class="px-6 py-5">
+                                        <span class="badge <?= $r['status_name'] === 'approved' ? 'badge-success' : ($r['status_name'] === 'rejected' ? 'badge-danger' : 'badge-warning') ?>">
+                                            <?= ucfirst($r['status_name']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-5 text-right">
+                                        <a href="index.php?action=view_request&id=<?= $r['request_id'] ?>" class="text-blue-600 font-black text-xs hover:text-blue-800 transition-colors uppercase tracking-wider">Inspect</a>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Settings -->
+            <div id="tab-settings" class="tab-content space-y-10">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-black text-slate-900">System Parameters</h2>
+                    <div class="flex gap-3">
+                        <button onclick="toggleModal('modal-add-directorate')" class="btn-primary bg-slate-800 hover:bg-slate-900">🏢 Add Directorate</button>
+                        <button onclick="toggleModal('modal-add-role')" class="btn-primary bg-slate-800 hover:bg-slate-900">🛡️ Add Role</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <!-- Directorates -->
+                    <div class="card overflow-hidden">
+                        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Managed Directorates</h3>
+                        </div>
+                        <div class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                            <?php foreach ($directorates as $d): ?>
+                            <div class="px-6 py-5 flex items-center justify-between group">
+                                <div>
+                                    <p class="font-bold text-slate-900"><?= htmlspecialchars($d['name']) ?></p>
+                                    <p class="text-[10px] font-black <?= ($d['is_active'] ?? 1) ? 'text-emerald-500' : 'text-rose-500' ?> uppercase tracking-tighter">
+                                        <?= ($d['is_active'] ?? 1) ? '• Operational' : '• Suspended' ?>
+                                    </p>
+                                </div>
+                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="editDirectorate(<?= $d['id'] ?>, '<?= addslashes($d['name']) ?>')" class="p-2 hover:bg-slate-100 rounded-lg">✏️</button>
                                     <form method="POST" class="inline">
                                         <?= csrf_field() ?>
-                                        <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
-                                        <?php if ($hasActive): ?>
-                                            <?php if ((int)($u['active'] ?? $u['is_active'] ?? 1)): ?>
-                                                <button type="submit" name="admin_user_action" value="deactivate" class="text-gray-400 hover:text-amber-600 transition">🚫</button>
-                                            <?php else: ?>
-                                                <button type="submit" name="admin_user_action" value="activate" class="text-gray-400 hover:text-green-600 transition">✅</button>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                        <button type="submit" name="admin_user_action" value="delete" onclick="return confirm('Delete this user?')" class="text-gray-400 hover:text-red-600 transition">🗑️</button>
+                                        <input type="hidden" name="delete_directorate_id" value="<?= $d['id'] ?>">
+                                        <button type="submit" class="p-2 hover:bg-rose-50 text-rose-500 rounded-lg">🗑️</button>
                                     </form>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Requests Tab -->
-            <div id="tab-requests" class="tab-content space-y-6">
-                <h2 class="text-xl font-extrabold text-gray-900">Recent System Requests</h2>
-                <div class="card overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Request ID</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Employee</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Type</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
-                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <?php foreach ($recent_requests as $r): ?>
-                            <tr>
-                                <td class="px-6 py-4 font-mono text-sm">#<?= $r['request_id'] ?></td>
-                                <td class="px-6 py-4 font-bold text-gray-900"><?= htmlspecialchars($r['employee_name']) ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-600"><?= htmlspecialchars($r['request_type']) ?></td>
-                                <td class="px-6 py-4">
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider <?= $r['status_name'] === 'approved' ? 'bg-green-100 text-green-700' : ($r['status_name'] === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') ?>">
-                                        <?= ucfirst($r['status_name']) ?>
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-right">
-                                    <a href="index.php?action=view_request&id=<?= $r['request_id'] ?>" class="text-blue-600 font-bold text-sm hover:underline">View</a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Settings Tab -->
-            <div id="tab-settings" class="tab-content space-y-8">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-extrabold text-gray-900">System Configuration</h2>
-                    <div class="flex gap-3">
-                        <button onclick="toggleModal('modal-add-directorate')" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition shadow-sm">🏢 Add Directorate</button>
-                        <button onclick="toggleModal('modal-add-role')" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition shadow-sm">🛡️ Add Role</button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Directorates List -->
-                    <div class="card overflow-hidden">
-                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                            <h3 class="font-extrabold text-gray-800 uppercase tracking-wider text-xs">Directorates</h3>
-                        </div>
-                        <div class="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-                            <?php 
-                            try {
-                                $dirs = $pdo->query("SELECT * FROM directorates ORDER BY name ASC")->fetchAll();
-                                if (empty($dirs)) echo "<p class='p-6 text-sm text-gray-400 italic'>No directorates found.</p>";
-                                foreach ($dirs as $d): ?>
-                                <div class="px-6 py-4 flex items-center justify-between">
-                                    <div>
-                                        <p class="font-bold text-gray-900 text-sm"><?= htmlspecialchars($d['name']) ?></p>
-                                        <p class="text-[10px] font-bold <?= ($d['is_active'] ?? 1) ? 'text-green-500' : 'text-red-500' ?> uppercase"><?= ($d['is_active'] ?? 1) ? 'Active' : 'Inactive' ?></p>
-                                    </div>
-                                    <div class="flex gap-3">
-                                        <button onclick="editDirectorate(<?= $d['id'] ?>, '<?= addslashes($d['name']) ?>')" class="text-gray-400 hover:text-blue-600">✏️</button>
-                                        <form method="POST" class="inline">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="delete_directorate_id" value="<?= $d['id'] ?>">
-                                            <button type="submit" onclick="return confirm('Delete directorate?')" class="text-gray-400 hover:text-red-600">🗑️</button>
-                                        </form>
-                                    </div>
                                 </div>
-                                <?php endforeach;
-                            } catch (Exception $e) {
-                                echo "<p class='p-6 text-sm text-red-400 italic'>Error loading directorates. Table may be missing.</p>";
-                            } ?>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
 
-                    <!-- Roles List -->
+                    <!-- Roles -->
                     <div class="card overflow-hidden">
-                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                            <h3 class="font-extrabold text-gray-800 uppercase tracking-wider text-xs">User Roles</h3>
+                        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Access Roles</h3>
                         </div>
-                        <div class="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-                            <?php 
-                            try {
-                                $roles = $pdo->query("SELECT * FROM roles ORDER BY role_name ASC")->fetchAll();
-                                if (empty($roles)) echo "<p class='p-6 text-sm text-gray-400 italic'>No roles found.</p>";
-                                foreach ($roles as $r): ?>
-                                <div class="px-6 py-4 flex items-center justify-between">
-                                    <div>
-                                        <p class="font-bold text-gray-900 text-sm"><?= htmlspecialchars($r['role_name']) ?></p>
-                                        <p class="text-[10px] font-bold <?= ($r['is_active'] ?? 1) ? 'text-green-500' : 'text-red-500' ?> uppercase"><?= ($r['is_active'] ?? 1) ? 'Active' : 'Inactive' ?></p>
-                                    </div>
-                                    <div class="flex gap-3">
-                                        <button onclick="editRole(<?= $r['role_id'] ?>, '<?= addslashes($r['role_name']) ?>')" class="text-gray-400 hover:text-blue-600">✏️</button>
-                                        <form method="POST" class="inline">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="delete_role_id" value="<?= $r['role_id'] ?>">
-                                            <button type="submit" onclick="return confirm('Delete role?')" class="text-gray-400 hover:text-red-600">🗑️</button>
-                                        </form>
-                                    </div>
+                        <div class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                            <?php foreach ($roles_list as $r): ?>
+                            <div class="px-6 py-5 flex items-center justify-between group">
+                                <div>
+                                    <p class="font-bold text-slate-900"><?= htmlspecialchars($r['role_name']) ?></p>
+                                    <p class="text-[10px] font-black <?= ($r['is_active'] ?? 1) ? 'text-emerald-500' : 'text-rose-500' ?> uppercase tracking-tighter">
+                                        <?= ($r['is_active'] ?? 1) ? '• Active' : '• Inactive' ?>
+                                    </p>
                                 </div>
-                                <?php endforeach;
-                            } catch (Exception $e) {
-                                echo "<p class='p-6 text-sm text-red-400 italic'>Error loading roles. Table may be missing.</p>";
-                            } ?>
+                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="editRole(<?= $r['role_id'] ?>, '<?= addslashes($r['role_name']) ?>')" class="p-2 hover:bg-slate-100 rounded-lg">✏️</button>
+                                    <form method="POST" class="inline">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="delete_role_id" value="<?= $r['role_id'] ?>">
+                                        <button type="submit" class="p-2 hover:bg-rose-50 text-rose-500 rounded-lg">🗑️</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </main>
 
     <!-- Modals -->
     <div id="modal-create-user" class="modal">
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden p-8">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl p-10">
             <div class="flex items-center justify-between mb-8">
-                <h3 class="text-xl font-extrabold text-gray-900">Create New System User</h3>
-                <button onclick="toggleModal('modal-create-user')" class="text-gray-400 hover:text-gray-600">✕</button>
+                <h3 class="text-2xl font-black text-slate-900 tracking-tight">Onboard New User</h3>
+                <button onclick="toggleModal('modal-create-user')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all">✕</button>
             </div>
-            <form method="POST" class="space-y-6">
+            <form method="POST" class="grid grid-cols-2 gap-6">
                 <?= csrf_field() ?>
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Full Name</label>
-                        <input type="text" name="fullname" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Username / Email</label>
-                        <input type="text" name="username" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Password</label>
-                        <input type="password" name="password" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Directorate</label>
-                        <select name="directorate" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-                            <?php foreach($dirs as $d) if($d['is_active']) echo "<option value='{$d['name']}'>{$d['name']}</option>"; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">System Role</label>
-                        <select name="role_id" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-                            <?php foreach($roles as $r) if($r['is_active']) echo "<option value='{$r['role_id']}'>{$r['role_name']}</option>"; ?>
-                        </select>
-                    </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Legal Full Name</label>
+                    <input type="text" name="fullname" required class="form-input">
                 </div>
-                <div class="flex justify-end gap-3 pt-4">
-                    <button type="button" onclick="toggleModal('modal-create-user')" class="px-6 py-3 text-sm font-bold text-gray-500 hover:text-gray-700">Cancel</button>
-                    <button type="submit" name="admin_create_user" class="bg-blue-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-200">Register User</button>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">System Username</label>
+                    <input type="text" name="username" required class="form-input">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Access Password</label>
+                    <input type="password" name="password" required class="form-input">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Directorate</label>
+                    <select name="directorate" required class="form-input">
+                        <?php foreach($directorates as $d) if($d['is_active'] ?? 1) echo "<option value='{$d['name']}'>{$d['name']}</option>"; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Access Role</label>
+                    <select name="role_id" required class="form-input">
+                        <?php foreach($roles_list as $r) if($r['is_active'] ?? 1) echo "<option value='{$r['role_id']}'>{$r['role_name']}</option>"; ?>
+                    </select>
+                </div>
+                <div class="col-span-2 pt-4 flex justify-end gap-4">
+                    <button type="button" onclick="toggleModal('modal-create-user')" class="px-6 py-3 text-sm font-bold text-slate-500">Cancel</button>
+                    <button type="submit" name="admin_create_user" class="btn-primary px-10">Authorize User</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="modal-add-directorate" class="modal">
-        <div class="bg-white w-full max-w-md rounded-2xl p-8">
-            <h3 class="text-xl font-extrabold mb-6">Add New Directorate</h3>
+        <div class="bg-white w-full max-w-md rounded-3xl p-10">
+            <h3 class="text-xl font-black mb-6">New Directorate</h3>
             <form method="POST">
                 <?= csrf_field() ?>
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Directorate Name</label>
-                    <input type="text" name="directorate_name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="mb-8">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Directorate Name</label>
+                    <input type="text" name="directorate_name" required class="form-input">
                 </div>
                 <div class="flex justify-end gap-3">
-                    <button type="button" onclick="toggleModal('modal-add-directorate')" class="text-gray-500 font-bold">Cancel</button>
-                    <button type="submit" name="add_directorate" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">Save</button>
+                    <button type="button" onclick="toggleModal('modal-add-directorate')" class="font-bold text-slate-400">Cancel</button>
+                    <button type="submit" name="add_directorate" class="btn-primary">Create</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="modal-add-role" class="modal">
-        <div class="bg-white w-full max-w-md rounded-2xl p-8">
-            <h3 class="text-xl font-extrabold mb-6">Add New System Role</h3>
+        <div class="bg-white w-full max-w-md rounded-3xl p-10">
+            <h3 class="text-xl font-black mb-6">New System Role</h3>
             <form method="POST">
                 <?= csrf_field() ?>
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Role Name</label>
-                    <input type="text" name="role_name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="mb-8">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Role Name</label>
+                    <input type="text" name="role_name" required class="form-input">
                 </div>
                 <div class="flex justify-end gap-3">
-                    <button type="button" onclick="toggleModal('modal-add-role')" class="text-gray-500 font-bold">Cancel</button>
-                    <button type="submit" name="add_role" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">Save</button>
+                    <button type="button" onclick="toggleModal('modal-add-role')" class="font-bold text-slate-400">Cancel</button>
+                    <button type="submit" name="add_role" class="btn-primary">Create</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="modal-message" class="modal">
-        <div class="bg-white w-full max-w-md rounded-2xl p-8">
-            <h3 class="text-xl font-extrabold mb-2">Send Message</h3>
-            <p class="text-sm text-gray-500 mb-6">To: <span id="msg-user-name" class="font-bold text-blue-600"></span></p>
-            <form method="POST">
+        <div class="bg-white w-full max-w-md rounded-3xl p-10">
+            <h3 class="text-xl font-black mb-2">Secure Message</h3>
+            <p class="text-sm text-slate-400 mb-8">Recipient: <span id="msg-user-name" class="text-blue-600 font-black"></span></p>
+            <form method="POST" class="space-y-6">
                 <?= csrf_field() ?>
                 <input type="hidden" name="message_user_id" id="msg-user-id">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Subject</label>
-                        <input type="text" name="message_subject" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Message</label>
-                        <textarea name="message_content" rows="4" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Subject</label>
+                    <input type="text" name="message_subject" required class="form-input">
                 </div>
-                <div class="flex justify-end gap-3 mt-8">
-                    <button type="button" onclick="toggleModal('modal-message')" class="text-gray-500 font-bold">Cancel</button>
-                    <button type="submit" name="admin_send_message" class="bg-blue-600 text-white px-8 py-2 rounded-xl font-bold shadow-lg shadow-blue-200">Send</button>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Message Body</label>
+                    <textarea name="message_content" rows="4" required class="form-input"></textarea>
+                </div>
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" onclick="toggleModal('modal-message')" class="font-bold text-slate-400">Dismiss</button>
+                    <button type="submit" name="admin_send_message" class="btn-primary">Transmit</button>
                 </div>
             </form>
         </div>
@@ -695,37 +520,43 @@ try {
 
     <script>
         function switchTab(tabId) {
-            // Hide all
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('[data-tab-btn]').forEach(el => {
-                el.classList.remove('text-blue-600', 'border-blue-600');
-                el.classList.add('text-gray-500', 'border-transparent');
+                el.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+                el.classList.add('text-slate-500');
             });
 
-            // Show target
-            document.getElementById('tab-' + tabId).classList.add('active');
-            const btn = document.querySelector(`[data-tab-btn="${tabId}"]`);
-            btn.classList.remove('text-gray-500', 'border-transparent');
-            btn.classList.add('text-blue-600', 'border-blue-600');
-            
-            // Save state
-            const url = new URL(window.location);
-            url.searchParams.set('tab', tabId);
-            window.history.pushState({}, '', url);
+            const target = document.getElementById('tab-' + tabId);
+            if (target) {
+                target.classList.add('active');
+                const btn = document.querySelector(`[data-tab-btn="${tabId}"]`);
+                if (btn) {
+                    btn.classList.remove('text-slate-500');
+                    btn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                }
+                const url = new URL(window.location);
+                url.searchParams.set('tab', tabId);
+                window.history.pushState({}, '', url);
+            }
         }
 
         function toggleModal(id) {
-            document.getElementById(id).classList.toggle('show');
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.toggle('show');
         }
 
         function openMessageModal(id, name) {
-            document.getElementById('msg-user-id').value = id;
-            document.getElementById('msg-user-name').innerText = name;
-            toggleModal('modal-message');
+            const idInput = document.getElementById('msg-user-id');
+            const nameSpan = document.getElementById('msg-user-name');
+            if (idInput && nameSpan) {
+                idInput.value = id;
+                nameSpan.innerText = name;
+                toggleModal('modal-message');
+            }
         }
 
         function editDirectorate(id, currentName) {
-            const name = prompt("Edit Directorate Name:", currentName);
+            const name = prompt("Enter new name for Directorate:", currentName);
             if (name && name.trim() !== "" && name !== currentName) {
                 const f = document.createElement('form');
                 f.method = 'POST';
@@ -736,7 +567,7 @@ try {
         }
 
         function editRole(id, currentName) {
-            const name = prompt("Edit Role Name:", currentName);
+            const name = prompt("Enter new name for Role:", currentName);
             if (name && name.trim() !== "" && name !== currentName) {
                 const f = document.createElement('form');
                 f.method = 'POST';
@@ -746,7 +577,6 @@ try {
             }
         }
 
-        // Initialize based on URL
         document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             const tab = params.get('tab') || 'users';
