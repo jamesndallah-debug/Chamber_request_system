@@ -59,8 +59,8 @@ class RequestModel {
                 $sql .= " AND u.department = ? AND r.request_type NOT IN ('Salary advance','Retirement','TNCC retirement request')";
                 $params[] = $user_data['department'];
                 break;
-            case 2: // HRM - passed HOD, exclude Retirement
-                $sql .= " AND r.hod_status = 'approved' AND r.request_type NOT IN ('Retirement','TNCC retirement request')";
+            case 2: // HRM - passed HOD, exclude Retirement unless approved by finance
+                $sql .= " AND r.hod_status = 'approved' AND (r.request_type NOT IN ('Retirement','TNCC retirement request') OR r.finance_status = 'approved')";
                 break;
             case 6: // Internal Auditor - passed HRM, exclude Salary advance and Retirement
                 $sql .= " AND r.hrm_status = 'approved' AND r.request_type NOT IN ('Salary advance','Retirement','TNCC retirement request')";
@@ -99,6 +99,48 @@ class RequestModel {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$user_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Check if a user has any approved imprest request older than 7 days that hasn't been retired.
+     * Returns the age in days of the oldest overdue imprest, or false if none.
+     */
+    public function get_overdue_imprest_days($user_id, $role_id) {
+        // CEO (role_id 4) is exempt
+        if ((int)$role_id === 4) return false;
+
+        try {
+            // Find approved imprest requests older than 7 days
+            $stmt = $this->pdo->prepare("
+                SELECT request_id, created_at 
+                FROM requests 
+                WHERE user_id = ? 
+                  AND request_type = 'Imprest request' 
+                  AND status_id = 2 
+                  AND created_at <= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                ORDER BY created_at ASC
+            ");
+            $stmt->execute([$user_id]);
+            $imprests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($imprests as $imp) {
+                // Check if a retirement exists for this user created after this imprest
+                $stmtRet = $this->pdo->prepare("
+                    SELECT COUNT(*) 
+                    FROM requests 
+                    WHERE user_id = ? 
+                      AND request_type IN ('Retirement', 'TNCC retirement request') 
+                      AND created_at >= ?
+                ");
+                $stmtRet->execute([$user_id, $imp['created_at']]);
+                if ((int)$stmtRet->fetchColumn() === 0) {
+                    return (int)floor((time() - strtotime($imp['created_at'])) / 86400);
+                }
+            }
+        } catch (PDOException $e) {
+            error_log("Overdue imprest check error: " . $e->getMessage());
+        }
+        return false;
     }
 
     public function get_request_by_id($request_id) {

@@ -231,7 +231,7 @@ foreach ($all_items as $item) {
         .message-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(11,94,215,.1); }
         .message-unread { border-left: 4px solid #0b5ed7; background: #f0f9ff; }
         .marquee { white-space: nowrap; overflow: hidden; }
-        .marquee > span { display:inline-block; padding-left:100%; animation: marquee 30s linear infinite; }
+        .marquee > span { display:inline-block; padding-left:100%; animation: marquee 45s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%);} 100% { transform: translateX(-100%);} }
     </style>
 </head>
@@ -262,14 +262,14 @@ foreach ($all_items as $item) {
                 </a>
             </div>
         </header>
-        <div class="glass px-4 py-2 fixed top-16 left-0 md:left-72 right-0 z-30 bg-white/90">
-            <div class="marquee text-gray-700 text-sm">
+        <div class="glass px-4 py-3 fixed top-24 left-0 md:left-72 right-0 z-30 bg-white/90">
+            <div class="marquee text-gray-800 text-base">
                 <span>Messages — Your personal communication center 📧 Stay connected with your team 💙💛💚 • </span>
             </div>
         </div>
 
         <!-- Main Content Area -->
-        <main class="flex-1 p-6 pt-32">
+        <main class="flex-1 p-6 pt-44 md:pt-40">
             <div class="glass p-6 rounded-xl">
                 <?php if (isset($_SESSION['flash'])): 
                     $flash = $_SESSION['flash'];

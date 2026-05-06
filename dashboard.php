@@ -381,7 +381,7 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                             </div>
                         </div>
                     </div>
-                    <?php if ((int)$user['role_id'] === 5): ?>
+                    <?php if (in_array((int)$user['role_id'], [2, 5])): ?>
                     <div class="mb-4 flex justify-end">
                         <a href="index.php?action=export_financial_requests" class="btn-hero inline-block text-sm font-semibold py-2 px-4 rounded-lg shadow-md transition">
                             <span class="mr-2">📤</span> Export to Excel

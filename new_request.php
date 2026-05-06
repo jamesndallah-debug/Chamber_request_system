@@ -81,6 +81,28 @@ try {
                     </div>
                 <?php endif; ?>
 
+                <?php if (isset($overdue_days) && $overdue_days !== false): ?>
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-xl">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-bold text-amber-800">
+                                    Attention: Outstanding Imprest Found
+                                </p>
+                                <p class="text-sm text-amber-700 mt-1">
+                                    You have an unretired Imprest request from <?= $overdue_days ?> days ago. 
+                                    System policy requires all outstanding imprests to be retired after 7 days before any new requests can be submitted.
+                                    <strong>You are currently restricted to submitting only Retirement requests.</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <form action="index.php?action=new_request" method="POST" enctype="multipart/form-data" class="space-y-6">
                     <?= csrf_field() ?>
                     <div>
@@ -88,12 +110,17 @@ try {
                         <select id="request_type" name="request_type" class="w-full px-4 py-3 border rounded-lg bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" required style="font-size: 16px; line-height: 1.5;">
                             <option value="" style="color: #6b7280; font-style: italic;">-- Select Request Type --</option>
                             <optgroup label="💼 Financial Requests" style="font-weight: normal; color: #1f2937; background-color: #f3f4f6; padding: 8px;">
-                                <option value="Imprest request" style="color: #000000; padding: 8px 12px;">💰 Imprest request</option>
+                                <?php if (!isset($overdue_days) || $overdue_days === false): ?>
+                                    <option value="Imprest request" style="color: #000000; padding: 8px 12px;">💰 Imprest request</option>
+                                <?php endif; ?>
                                 <option value="Retirement" style="color: #000000; padding: 8px 12px;">📑 Retirement</option>
-                                <option value="Salary advance" style="color: #000000; padding: 8px 12px;">💵 Salary advance</option>
-                                <option value="Reimbursement request" style="color: #000000; padding: 8px 12px;">↩️ Reimbursement request</option>
-                                <option value="Travel form" style="color: #000000; padding: 8px 12px;">✈️ Travel form</option>
+                                <?php if (!isset($overdue_days) || $overdue_days === false): ?>
+                                    <option value="Salary advance" style="color: #000000; padding: 8px 12px;">💵 Salary advance</option>
+                                    <option value="Reimbursement request" style="color: #000000; padding: 8px 12px;">↩️ Reimbursement request</option>
+                                    <option value="Travel form" style="color: #000000; padding: 8px 12px;">✈️ Travel form</option>
+                                <?php endif; ?>
                             </optgroup>
+                            <?php if (!isset($overdue_days) || $overdue_days === false): ?>
                             <optgroup label="👥 HRM Requests" style="font-weight: normal; color: #1f2937; background-color: #f3f4f6; padding: 8px;">
                                 <option value="Annual leave" style="color: #1e3a8a; padding: 8px 12px;">🏖️ Annual leave</option>
                                 <option value="Compassionate leave" style="color: #1e3a8a; padding: 8px 12px;">🤝 Compassionate leave</option>
@@ -102,6 +129,7 @@ try {
                                 <option value="Sick leave" style="color: #1e3a8a; padding: 8px 12px;">🤒 Sick leave</option>
                                 <option value="Staff clearance form" style="color: #1e3a8a; padding: 8px 12px;">📋 Staff clearance form</option>
                             </optgroup>
+                            <?php endif; ?>
                         </select>
                         <p class="text-xs text-gray-500 mt-1" id="type_hint">Amount will be required for financial requests only.</p>
                     </div>

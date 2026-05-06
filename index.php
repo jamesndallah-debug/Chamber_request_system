@@ -443,13 +443,13 @@ switch ($action) {
         break;
 
     case 'export_financial_requests':
-        // Only allow Finance to export financial requests
-        if (!$user || (int)$user['role_id'] !== 5) {
+        // Only allow Finance and HRM to export financial requests
+        if (!$user || !in_array((int)$user['role_id'], [2, 5])) {
             header('Location: index.php?action=dashboard');
             exit;
         }
         try {
-            // Get all requests visible to Finance and filter to financial types
+            // Get all requests visible to the user and filter to financial types
             $requests = $requestModel->get_requests_for_role($user['role_id'], $user);
             $financial_request_types = ['Imprest request', 'Reimbursement request', 'Salary advance', 'Retirement', 'TNCC retirement request'];
             $financial_requests = array_values(array_filter($requests, function($r) use ($financial_request_types) {
@@ -510,10 +510,19 @@ switch ($action) {
         break;
 
     case 'new_request':
+        // Check for overdue unretired imprests (except for CEO)
+        $overdue_days = $requestModel->get_overdue_imprest_days($user['user_id'], $user['role_id']);
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             require_csrf_post();
-            $details_json = $_POST['details_json'] ?? '';
             $request_type = $_POST['request_type'] ?? '';
+            
+            // Block non-retirement requests if user has overdue imprests
+            if ($overdue_days !== false && !in_array($request_type, ['Retirement', 'TNCC retirement request'])) {
+                $error = "Access Denied: You have an outstanding Imprest request from $overdue_days days ago that has not been retired. You must submit a Retirement request before applying for any other request types.";
+            }
+
+            $details_json = $_POST['details_json'] ?? '';
             // Validate that any date fields are not in the past
             try {
                 $today = date('Y-m-d');
@@ -752,12 +761,19 @@ switch ($action) {
             exit;
         }
 
+        // Check for overdue unretired imprests (except for CEO)
+        $overdue_days = $requestModel->get_overdue_imprest_days($user['user_id'], $user['role_id']);
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             require_csrf_post();
-            $details_json = $_POST['details_json'] ?? '';
             $request_type = $_POST['request_type'] ?? '';
-            
-            // Re-validate just like new_request
+
+            // Block non-retirement resubmissions if user has overdue imprests
+            if ($overdue_days !== false && !in_array($request_type, ['Retirement', 'TNCC retirement request'])) {
+                $error = "Access Denied: You have an outstanding Imprest request from $overdue_days days ago that has not been retired. You must submit a Retirement request before resubmitting any other request types.";
+            }
+
+            $details_json = $_POST['details_json'] ?? '';
             $days = (int)($_POST['days_applied'] ?? 0);
             if (in_array($request_type, ['Annual leave','Compassionate leave','Paternity leave','Maternity leave'], true)) {
                 if ($request_type !== 'Sick leave') {

@@ -7,7 +7,7 @@ if (!defined('ACCESS_ALLOWED')) {
 }
 
 // Ensure we have user data and admin role
-if (!$user || (int)$user['role_id'] !== 7) {
+if (!isset($user) || !$user || (int)$user['role_id'] !== 7) {
     header('Location: index.php?action=login');
     exit;
 }
