@@ -276,6 +276,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch Data for Display
+$stats = [
+    'total_users' => 0,
+    'total_requests' => 0,
+    'pending_requests' => 0,
+    'approved_requests' => 0
+];
+$users_list = [];
+$recent_requests = [];
+$directorates = [];
+$roles_list = [];
+
 try {
     $hasDeletedAt = false;
     try { $pdo->query("SELECT deleted_at FROM users LIMIT 1"); $hasDeletedAt = true; } catch (Exception $e) {}
@@ -283,7 +294,7 @@ try {
     $userWhere = $hasDeletedAt ? "WHERE u.deleted_at IS NULL" : "WHERE 1=1";
     
     $stats = [
-        'total_users' => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL")->fetchColumn(),
+        'total_users' => (int)$pdo->query("SELECT COUNT(*) FROM users " . ($hasDeletedAt ? "WHERE deleted_at IS NULL" : ""))->fetchColumn(),
         'total_requests' => (int)$pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn(),
         'pending_requests' => (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE ed_status = 'pending' AND hod_status != 'rejected'")->fetchColumn(),
         'approved_requests' => (int)$pdo->query("SELECT COUNT(*) FROM requests WHERE ed_status = 'approved'")->fetchColumn()
@@ -373,12 +384,17 @@ try {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <?php 
                 $cards = [
-                    ['Users', $stats['total_users'], '👥', 'blue'],
-                    ['Requests', $stats['total_requests'], '📋', 'indigo'],
-                    ['Pending', $stats['pending_requests'], '⏳', 'amber'],
-                    ['Success', $stats['approved_requests'], '✨', 'emerald']
+                    ['Users', isset($stats['total_users']) ? $stats['total_users'] : 0, '👥', 'blue'],
+                    ['Requests', isset($stats['total_requests']) ? $stats['total_requests'] : 0, '📋', 'indigo'],
+                    ['Pending', isset($stats['pending_requests']) ? $stats['pending_requests'] : 0, '⏳', 'amber'],
+                    ['Success', isset($stats['approved_requests']) ? $stats['approved_requests'] : 0, '✨', 'emerald']
                 ];
-                foreach ($cards as [$label, $val, $icon, $color]): ?>
+                foreach ($cards as $card): 
+                    $label = $card[0];
+                    $val   = $card[1];
+                    $icon  = $card[2];
+                    $color = $card[3];
+                ?>
                 <div class="card p-6 border-t-4 border-<?= $color ?>-500">
                     <div class="flex items-center justify-between mb-4">
                         <span class="text-2xl"><?= $icon ?></span>
@@ -420,6 +436,7 @@ try {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
+                                <?php if (!empty($users_list)): ?>
                                 <?php foreach ($users_list as $u): ?>
                                 <tr class="hover:bg-slate-50/50 transition-colors group">
                                     <td class="px-6 py-5">
@@ -428,14 +445,14 @@ try {
                                                 <?= substr($u['fullname'], 0, 1) ?>
                                             </div>
                                             <div>
-                                                <p class="font-bold text-slate-900"><?= htmlspecialchars($u['fullname']) ?></p>
-                                                <p class="text-xs font-medium text-slate-400"><?= htmlspecialchars($u['username']) ?></p>
+                                                <p class="font-bold text-slate-900"><?= htmlspecialchars($u['fullname'] ?? 'Unknown') ?></p>
+                                                <p class="text-xs font-medium text-slate-400"><?= htmlspecialchars($u['username'] ?? 'N/A') ?></p>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-5">
-                                        <p class="text-sm font-bold text-slate-700"><?= htmlspecialchars($u['role_name']) ?></p>
-                                        <p class="text-[10px] font-black text-blue-500 uppercase"><?= htmlspecialchars($u['directorate']) ?></p>
+                                        <p class="text-sm font-bold text-slate-700"><?= htmlspecialchars($u['role_name'] ?? 'Unknown') ?></p>
+                                        <p class="text-[10px] font-black text-blue-500 uppercase"><?= htmlspecialchars($u['directorate'] ?? 'N/A') ?></p>
                                     </td>
                                     <td class="px-6 py-5">
                                         <?php $isActive = (int)($u['active'] ?? $u['is_active'] ?? 1); ?>
@@ -445,11 +462,11 @@ try {
                                     </td>
                                     <td class="px-6 py-5">
                                         <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onclick="openMessageModal(<?= $u['user_id'] ?>, '<?= addslashes($u['fullname']) ?>')" class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg" title="Message">📧</button>
-                                            <?php if ($u['user_id'] != $user['user_id']): ?>
+                                            <button onclick="openMessageModal(<?= (int)($u['user_id'] ?? 0) ?>, '<?= addslashes($u['fullname'] ?? 'Unknown') ?>')" class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg" title="Message">📧</button>
+                                            <?php if (($u['user_id'] ?? 0) != $user['user_id']): ?>
                                                 <form method="POST" class="inline">
                                                     <?= csrf_field() ?>
-                                                    <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                                    <input type="hidden" name="user_id" value="<?= (int)($u['user_id'] ?? 0) ?>">
                                                     <?php if ($isActive): ?>
                                                         <button type="submit" name="admin_user_action" value="deactivate" class="p-2 hover:bg-amber-50 text-amber-600 rounded-lg" title="Deactivate">🚫</button>
                                                     <?php else: ?>
@@ -462,6 +479,7 @@ try {
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -484,14 +502,15 @@ try {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
+                                <?php if (!empty($recent_requests)): ?>
                                 <?php foreach ($recent_requests as $r): ?>
                                 <tr class="hover:bg-slate-50/50 transition-colors">
                                     <td class="px-6 py-5 font-mono text-sm font-bold text-slate-500">REQ-<?= str_pad($r['request_id'], 5, '0', STR_PAD_LEFT) ?></td>
-                                    <td class="px-6 py-5 font-extrabold text-slate-900"><?= htmlspecialchars($r['employee_name']) ?></td>
-                                    <td class="px-6 py-5 text-sm font-medium text-slate-600"><?= htmlspecialchars($r['request_type']) ?></td>
+                                    <td class="px-6 py-5 font-extrabold text-slate-900"><?= htmlspecialchars($r['employee_name'] ?? 'Unknown') ?></td>
+                                    <td class="px-6 py-5 text-sm font-medium text-slate-600"><?= htmlspecialchars($r['request_type'] ?? 'N/A') ?></td>
                                     <td class="px-6 py-5">
-                                        <span class="badge <?= $r['status_name'] === 'approved' ? 'badge-success' : ($r['status_name'] === 'rejected' ? 'badge-danger' : 'badge-warning') ?>">
-                                            <?= ucfirst($r['status_name']) ?>
+                                        <span class="badge <?= ($r['status_name'] ?? '') === 'approved' ? 'badge-success' : (($r['status_name'] ?? '') === 'rejected' ? 'badge-danger' : 'badge-warning') ?>">
+                                            <?= ucfirst($r['status_name'] ?? 'Pending') ?>
                                         </span>
                                     </td>
                                     <td class="px-6 py-5 text-right">
@@ -499,6 +518,11 @@ try {
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
+                                <?php else: ?>
+                                <tr>
+                                    <td colspan="5" class="px-6 py-10 text-center text-slate-400">No recent activity logged.</td>
+                                </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>

@@ -512,6 +512,7 @@ switch ($action) {
     case 'new_request':
         // Check for overdue unretired imprests (except for CEO)
         $overdue_days = $requestModel->get_overdue_imprest_days($user['user_id'], $user['role_id']);
+        $error = '';
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             require_csrf_post();
@@ -601,7 +602,7 @@ switch ($action) {
                 $error = "File upload failed with error code: " . $_FILES['attachment']['error'];
             }
             // Enforce mandatory attachment for Retirement requests
-            if (!isset($error)) {
+            if (empty($error)) {
                 if ($request_type === 'Retirement' || $request_type === 'TNCC retirement request') {
                     if (!$upload_success || empty($request_data['attachment_path'])) {
                         $error = 'Attachment is required for Retirement requests. Please attach supporting documents.';
@@ -609,7 +610,7 @@ switch ($action) {
                 }
             }
             
-            if (!isset($error)) {
+            if (empty($error)) {
                 $result = $requestModel->create_request($request_data);
                 if ($result) {
                     // Workflow routing based on user role and request type
@@ -763,6 +764,7 @@ switch ($action) {
 
         // Check for overdue unretired imprests (except for CEO)
         $overdue_days = $requestModel->get_overdue_imprest_days($user['user_id'], $user['role_id']);
+        $error = '';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             require_csrf_post();
@@ -794,7 +796,7 @@ switch ($action) {
                 }
             }
 
-            if (!isset($error)) {
+            if (empty($error)) {
                 $request_data = [
                     'request_type' => $request_type,
                     'title' => $_POST['title'] ?? '',

@@ -40,7 +40,7 @@ if (isset($_POST['delete_message'])) {
 if (isset($_POST['mark_read'])) {
     require_csrf_post();
     $message_id = (int)$_POST['message_id'];
-    $is_notification = isset($_POST['is_notification']) && $_POST['is_notification'] == 1;
+    $is_notification = isset($_POST['is_notification']) && (int)$_POST['is_notification'] === 1;
     try {
         if ($is_notification) {
             $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?");

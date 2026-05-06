@@ -81,7 +81,7 @@ $details = json_decode((string)($request['details_json'] ?? '{}'), true) ?: [];
                 </div>
                 <p class="text-sm text-gray-600 mb-6">Modify your request and resubmit for approval.</p>
 
-                <?php if ($error): ?>
+                <?php if (!empty($error)): ?>
                     <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                         <span class="block sm:inline"><?= e($error) ?></span>
                     </div>

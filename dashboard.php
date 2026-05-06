@@ -470,14 +470,14 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                                     </form>
                                     <?php endif; ?>
                                 </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
-        </div>
-                                                     <?php endif; ?>
-                                                 </div>
-                </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
-                <!-- My Requests Tab Content -->
+        <!-- My Requests Tab Content -->
                 <?php if (in_array($user['role_id'], [2, 3, 4, 5, 6, 7])): ?>
                 <div id="myRequestsContent" style="display: none;">
                     <h2 class="text-2xl font-bold mb-4 title-gradient">My Requests <span class="chip">📝</span></h2>

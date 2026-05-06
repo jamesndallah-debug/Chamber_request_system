@@ -75,7 +75,7 @@ try {
                 </div>
                 <p class="text-sm text-gray-600 mb-6">To be efficient, sustainable and most preferred role model business member based organization in Tanzania and Africa.</p>
 
-                <?php if ($error): ?>
+                <?php if (!empty($error)): ?>
                     <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                         <span class="block sm:inline"><?= e($error) ?></span>
                     </div>
@@ -135,7 +135,7 @@ try {
                     </div>
                     <!-- Dynamic fields container -->
                     <div id="dynamic_fields" class="space-y-4 p-4 rounded-lg border border-gray-200 bg-gray-50"></div>
-                    </div>
+                    
                     <div id="amount_group" class="max-w-lg mx-auto">
                         <label for="amount" class="block text-gray-700 font-medium mb-2">Amount</label>
                         <input type="number" id="amount" name="amount" step="0.01" class="w-full px-4 py-2 border rounded-lg bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
