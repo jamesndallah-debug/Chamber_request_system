@@ -84,8 +84,10 @@ $filter_month = $_GET['month'] ?? '';
 $filter_sender = $_GET['sender'] ?? '';
 $filter_date = $_GET['date'] ?? '';
 
-// Get user's messages and notifications
+// Initialize variables
 $all_items = [];
+$flow_senders = [];
+
 try {
     // 1. Fetch private messages
     $msg_sql = "
@@ -306,8 +308,9 @@ foreach ($all_items as $item) {
                             <select name="sender" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
                                 <option value="">All Senders</option>
                                 <option value="System" <?= $filter_sender === 'System' ? 'selected' : '' ?>>System Notifications</option>
-                                <?php if (isset($flow_senders) && is_array($flow_senders)): ?>
-                                    <?php foreach ($flow_senders as $s): ?>                                      <option value="<?= htmlspecialchars($s) ?>" <?= $filter_sender === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
+                                <?php if (!empty($flow_senders)): ?>
+                                    <?php foreach ($flow_senders as $s): ?>
+                                        <option value="<?= htmlspecialchars($s) ?>" <?= $filter_sender === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>

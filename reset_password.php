@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password'] ?? '');
     $confirm  = trim($_POST['confirm_password'] ?? '');
     $token    = $_POST['token'] ?? '';
+    $otp      = trim($_POST['otp'] ?? '');
 
     if (!$token || !preg_match('/^[a-f0-9]{64}$/', $token)) {
         $error = 'Invalid reset token.';
@@ -39,13 +40,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Passwords do not match.';
         $showForm = true;
     } else {
-        // Re-validate token and get user
-        $stmt = $pdo->prepare('SELECT user_id, expires_at FROM password_resets WHERE token = ?');
+        // Re-validate token and OTP
+        $stmt = $pdo->prepare('SELECT user_id, otp, expires_at FROM password_resets WHERE token = ?');
         $stmt->execute([$token]);
         $rec = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         if (!$rec || strtotime($rec['expires_at']) < time()) {
-            $error = 'The reset link is invalid or expired.';
+            $error = 'The reset session has expired. Please request a new one.';
             $showForm = false;
+        } elseif ($rec['otp'] !== $otp) {
+            $error = 'Invalid verification code. Please check your email.';
+            $showForm = true;
         } else {
             // Update user password
             $hash = password_hash($password, PASSWORD_BCRYPT);
@@ -75,25 +80,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { margin:0; padding:0; min-height:100vh; background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #1e3a8a 100%); font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display:flex; align-items:center; justify-content:center; }
-        .reset-container { width:100%; max-width:480px; background:rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius:20px; box-shadow:0 20px 40px rgba(0,0,0,0.1); padding:40px; }
-        .reset-header { text-align:center; margin-bottom:24px; }
-        .reset-header h1 { margin:0; font-size:1.5rem; }
-        .form-group { margin-bottom:18px; }
-        .form-group label { display:block; margin-bottom:8px; font-weight:400; color:#374151; font-size:0.9rem; }
-        .form-input { width:100%; padding:12px 14px; border:2px solid #e1e5e9; border-radius:12px; font-size:1rem; background:#fff; }
+        .reset-container { width:100%; max-width:480px; background:rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius:20px; box-shadow:0 20px 40px rgba(0,0,0,0.1); padding:40px; margin: 20px; }
+        .reset-header { text-align:center; margin-bottom:32px; }
+        .reset-header h1 { margin:0 0 8px 0; font-size:1.75rem; color: #111; }
+        .reset-header p { margin:0; color: #666; font-size: 0.95rem; }
+        .form-group { margin-bottom:20px; }
+        .form-group label { display:block; margin-bottom:8px; font-weight:600; color:#374151; font-size:0.875rem; }
+        .form-input { width:100%; padding:14px; border:2px solid #e1e5e9; border-radius:12px; font-size:1rem; background:#fff; box-sizing: border-box; transition: border-color 0.2s; }
         .form-input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
-        .reset-btn { width:100%; padding:12px; background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color:#fff; border:none; border-radius:12px; font-weight:400; cursor:pointer; }
-        .success-message { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:0.9rem; text-align:center; }
-        .error-message { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:0.9rem; text-align:center; }
-        .back-link { text-align:center; margin-top:16px; }
-        .back-link a { color:#2563eb; text-decoration:none; font-weight:400; }
+        .otp-input { text-align: center; letter-spacing: 4px; font-weight: bold; font-size: 1.25rem; }
+        .reset-btn { width:100%; padding:14px; background: linear-gradient(135deg, #2563eb 0%, #3730a3 100%); color:#fff; border:none; border-radius:12px; font-weight:600; font-size: 1rem; cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .reset-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .success-message { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:16px; border-radius:12px; margin-bottom:20px; font-size:0.95rem; text-align:center; }
+        .error-message { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:16px; border-radius:12px; margin-bottom:20px; font-size:0.95rem; text-align:center; }
+        .back-link { text-align:center; margin-top:20px; }
+        .back-link a { color:#2563eb; text-decoration:none; font-weight:500; }
+        .back-link a:hover { text-decoration: underline; }
     </style>
 </head>
 <body class="ui-auth-page">
     <div class="reset-container">
         <div class="reset-header">
             <h1>Reset your password</h1>
-            <p>Enter a new password for your account.</p>
+            <p>Enter the code sent to your email and set a new password.</p>
         </div>
 
         <?php if ($message): ?>
@@ -109,20 +118,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?php echo e($token); ?>" />
+            
+            <div class="form-group">
+                <label for="otp">Verification Code (OTP)</label>
+                <input type="text" id="otp" name="otp" class="form-input otp-input" maxlength="6" placeholder="Enter 6-digit code" required autocomplete="one-time-code" />
+            </div>
+
             <div class="form-group">
                 <label for="password">New Password</label>
                 <input type="password" id="password" name="password" class="form-input" placeholder="At least 8 characters" required />
             </div>
+            
             <div class="form-group">
                 <label for="confirm_password">Confirm New Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" class="form-input" required />
+                <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="Repeat new password" required />
             </div>
+            
             <button type="submit" class="reset-btn">Update Password</button>
         </form>
         <?php endif; ?>
 
         <?php if (!$showForm && !$message): ?>
-            <div class="back-link"><a href="index.php?action=forgot_password">← Request a new reset link</a></div>
+            <div class="back-link"><a href="index.php?action=forgot_password">← Request a new reset code</a></div>
         <?php endif; ?>
     </div>
 </body>

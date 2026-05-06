@@ -345,12 +345,19 @@ try {
         user_id INT(11) NOT NULL,
         token VARCHAR(255) NOT NULL,
         expires_at DATETIME NOT NULL,
+        otp VARCHAR(10) NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY token (token),
         UNIQUE KEY uniq_user (user_id),
         CONSTRAINT password_resets_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+    // Ensure otp column exists (older installations)
+    $colCheck = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'otp'");
+    if ($colCheck && $colCheck->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE password_resets ADD COLUMN otp VARCHAR(10) NULL AFTER expires_at");
+    }
 } catch (Throwable $e) { /* ignore */ }
 
 // Function to get the current logged-in user from the session.

@@ -42,16 +42,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				                // Send welcome email if username looks like an email address
                 if (function_exists('send_email') && is_valid_email($username)) {
                     $appUrl = rtrim(BASE_URL, '/');
-                    $subject = 'Welcome to Chamber Request System';
-                    // Fix malformed HTML: add missing closing '>' on opening div tag
-                    $body = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">'
-                          . '<h2 style="margin:0 0 10px 0;">Welcome, ' . htmlspecialchars($fullname, ENT_QUOTES, 'UTF-8') . '!</h2>'
-                          . '<p>Your account has been created successfully.</p>'
-                          . '<ul style="margin:10px 0 10px 18px;">'
-                          . '<li><strong>Username:</strong> ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '</li>'
-                          . '</ul>'
-                          . '<p>You can sign in anytime here: <a href="' . $appUrl . '/index.php?action=login">' . $appUrl . '</a></p>'
-                          . '<p style="margin-top:16px;color:#555;">If you did not request this, please ignore this email.</p>'
+                    $subject = 'Welcome to Chamber Request System! 🎉';
+                    $body = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#333;line-height:1.6;max-width:600px;margin:0 auto;padding:20px;border:1px solid #eee;border-radius:10px;">'
+                          . '<div style="text-align:center;margin-bottom:20px;">'
+                          . '<img src="https://tncc.or.tz/wp-content/uploads/2025/05/TNCC-LOGO-PNG.png" alt="TNCC Logo" style="max-width:150px;">'
+                          . '</div>'
+                          . '<h2 style="color:#2563eb;margin-top:0;">Congratulations, ' . htmlspecialchars($fullname, ENT_QUOTES, 'UTF-8') . '!</h2>'
+                          . '<p>Your account has been created successfully. We are excited to have you on board!</p>'
+                          . '<p>You can now use your email to sign in and start managing your requests seamlessly.</p>'
+                          . '<div style="background:#f9fafb;padding:15px;border-radius:8px;margin:20px 0;">'
+                          . '<strong>Your Username:</strong> ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8')
+                          . '</div>'
+                          . '<div style="text-align:center;margin:30px 0;">'
+                          . '<a href="' . $appUrl . '/index.php?action=login" style="background:#2563eb;color:#fff;padding:12px 25px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Sign In Now</a>'
+                          . '</div>'
+                          . '<p style="font-size:14px;color:#666;">If you have any questions, please contact the system administrator.</p>'
+                          . '<hr style="border:0;border-top:1px solid #eee;margin:20px 0;">'
+                          . '<p style="font-size:12px;color:#999;text-align:center;">&copy; ' . date('Y') . ' TNCC Chamber Request System. All rights reserved.</p>'
                           . '</div>';
                     @send_email($username, $subject, $body);
                 }

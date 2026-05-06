@@ -963,6 +963,14 @@ switch ($action) {
         // Show leave balances for current user. Admin (7) can see all.
         include __DIR__ . '/leave_balances.php';
         break;
+
+    case 'profile':
+        if ($user) {
+            include __DIR__ . '/profile.php';
+            break;
+        }
+        header('Location: index.php?action=login');
+        exit;
         
     case 'process_request':
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {

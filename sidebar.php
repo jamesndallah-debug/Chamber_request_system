@@ -130,10 +130,28 @@ if ($roleLabel === '') {
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300
                     <?= $current_action === 'messages' ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-blue-100 group-hover:text-blue-600' ?>">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0l7.89-5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0l7.89-5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2-2v10a2 2 0 002 2z" />
                     </svg>
                 </div>
                 <span class="font-bold tracking-wide">Messages</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </a>
+
+        <a href="index.php?action=profile" class="group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 
+            <?= $current_action === 'profile' 
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
+                : 'hover:bg-slate-50 text-slate-600 hover:text-blue-600' ?>">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300
+                    <?= $current_action === 'profile' ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-blue-100 group-hover:text-blue-600' ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </div>
+                <span class="font-bold tracking-wide">My Profile</span>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />

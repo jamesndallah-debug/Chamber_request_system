@@ -19,36 +19,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($user) {
-            // Generate reset token
+            // Generate reset token and 6-digit OTP
             $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            $otp = sprintf('%06d', mt_rand(0, 999999));
+            $expires = date('Y-m-d H:i:s', strtotime('+15 minutes')); // OTPs should expire faster
             
-            // Store reset token in database
+            // Store reset token and OTP in database
             try {
-                $stmt = $pdo->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token = ?, expires_at = ?');
-                $stmt->execute([$user['user_id'], $token, $expires, $token, $expires]);
+                $stmt = $pdo->prepare('INSERT INTO password_resets (user_id, token, otp, expires_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE token = ?, otp = ?, expires_at = ?');
+                $stmt->execute([$user['user_id'], $token, $otp, $expires, $token, $otp, $expires]);
                 
-                // Send the reset email
+                // Send the reset email with OTP
                 $resetLink = rtrim(BASE_URL, '/') . '/index.php?action=reset_password&token=' . urlencode($token);
-                $subject = 'Reset your password';
-                $html = '<p>Hello ' . e($user['fullname'] ?? 'User') . ',</p>'
-                    . '<p>We received a request to reset your password. Click the link below to set a new password. This link will expire in 1 hour.</p>'
-                    . '<p><a href="' . e($resetLink) . '" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;">Reset Password</a></p>'
-                    . '<p>Or copy and paste this URL into your browser:<br>' . e($resetLink) . '</p>'
-                    . '<p>If you did not request this, you can ignore this email.</p>'
-                    . '<p>Regards,<br>Chamber Request System</p>';
+                $subject = $otp . ' is your Password Reset Code';
+                $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#333;line-height:1.6;max-width:600px;margin:0 auto;padding:20px;border:1px solid #eee;border-radius:10px;">'
+                    . '<div style="text-align:center;margin-bottom:20px;">'
+                    . '<img src="https://tncc.or.tz/wp-content/uploads/2025/05/TNCC-LOGO-PNG.png" alt="TNCC Logo" style="max-width:150px;">'
+                    . '</div>'
+                    . '<p>Hello ' . e($user['fullname'] ?? 'User') . ',</p>'
+                    . '<p>We received a request to reset your password. Use the verification code below to proceed:</p>'
+                    . '<div style="text-align:center;margin:30px 0;">'
+                    . '<div style="display:inline-block;background:#f3f4f6;padding:15px 30px;border-radius:12px;font-size:32px;font-weight:bold;letter-spacing:5px;color:#1e3a8a;border:1px solid #e5e7eb;">' . $otp . '</div>'
+                    . '</div>'
+                    . '<p style="text-align:center;color:#666;font-size:14px;">This code will expire in 15 minutes.</p>'
+                    . '<p>Alternatively, you can click the button below to reset your password directly:</p>'
+                    . '<div style="text-align:center;margin:30px 0;">'
+                    . '<a href="' . $resetLink . '" style="background:#2563eb;color:#fff;padding:12px 25px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Reset Password</a>'
+                    . '</div>'
+                    . '<p style="font-size:14px;color:#666;">If you did not request this, please ignore this email and your password will remain unchanged.</p>'
+                    . '<hr style="border:0;border-top:1px solid #eee;margin:20px 0;">'
+                    . '<p style="font-size:12px;color:#999;text-align:center;">&copy; ' . date('Y') . ' TNCC Chamber Request System. All rights reserved.</p>'
+                    . '</div>';
 
-                // Attempt to send; do not reveal delivery status to the user for security
                 @send_email($email, $subject, $html);
 
-                // Always show neutral success message
-                $message = 'If an account with that email exists, password reset instructions have been sent.';
+                // Redirect to reset page with token to allow OTP entry
+                header('Location: index.php?action=reset_password&token=' . urlencode($token));
+                exit;
                 
             } catch (Exception $e) {
                 $error = 'An error occurred. Please try again later.';
             }
         } else {
-            // Don't reveal if email exists or not for security
+            // Don't reveal if email exists or not for security, but redirect anyway to make it look consistent
             $message = 'If an account with that email exists, password reset instructions have been sent.';
         }
     }

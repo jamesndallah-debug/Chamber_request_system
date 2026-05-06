@@ -898,17 +898,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
 <?php if (!empty($force_my_requests_tab)): ?>
-<script>
 // Force My Requests as default tab when hinted by server
 document.addEventListener('DOMContentLoaded', function(){
-    if (typeof showTab === 'function') {
+    if (typeof showTab !== 'undefined' && typeof showTab === 'function') {
         showTab('myRequests');
     }
     if (window.setCountsScope) window.setCountsScope('my');
 });
-</script>
 <?php endif; ?>
+
 // Server-triggered confetti (after CEO approval)
 (function(){
     <?php if (!empty($_SESSION['confetti']) && $_SESSION['confetti'] === 'ed_approved') { unset($_SESSION['confetti']); ?>
