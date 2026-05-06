@@ -602,7 +602,7 @@ switch ($action) {
                 $error = "File upload failed with error code: " . $_FILES['attachment']['error'];
             }
             // Enforce mandatory attachment for Retirement requests
-            if (empty($error)) {
+            if ($error === '') {
                 if ($request_type === 'Retirement' || $request_type === 'TNCC retirement request') {
                     if (!$upload_success || empty($request_data['attachment_path'])) {
                         $error = 'Attachment is required for Retirement requests. Please attach supporting documents.';
@@ -610,7 +610,7 @@ switch ($action) {
                 }
             }
             
-            if (empty($error)) {
+            if ($error === '') {
                 $result = $requestModel->create_request($request_data);
                 if ($result) {
                     // Workflow routing based on user role and request type
@@ -796,7 +796,7 @@ switch ($action) {
                 }
             }
 
-            if (empty($error)) {
+            if ($error === '') {
                 $request_data = [
                     'request_type' => $request_type,
                     'title' => $_POST['title'] ?? '',
@@ -1257,7 +1257,7 @@ switch ($action) {
                 }
             }
             
-            if ($can_update && $result) {
+            if ($can_update && isset($result) && $result) {
                 $_SESSION['success'] = 'Voucher status updated successfully.';
             } else {
                 $_SESSION['error'] = 'Failed to update voucher status.';

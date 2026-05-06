@@ -2,6 +2,9 @@
 // FILE: vouchers.php
 // Vouchers listing page - only accessible to Finance and ED roles
 
+/** @var array $user */
+/** @var PDO $pdo */
+
 // Prevent direct access
 if (!defined('ACCESS_ALLOWED')) {
     header('HTTP/1.0 403 Forbidden');

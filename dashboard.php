@@ -2,6 +2,9 @@
 // FILE: views/dashboard.php
 // User dashboard view. Displays requests and vouchers relevant to the user's role.
 
+/** @var array $user */
+/** @var RequestModel $requestModel */
+
 // Get requests for the current user's role.
 $requests = $requestModel->get_requests_for_role($user['role_id'], $user);
 
@@ -475,9 +478,8 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                     </div>
                 <?php endif; ?>
             </div>
-        <?php endif; ?>
 
-        <!-- My Requests Tab Content -->
+            <!-- My Requests Tab Content -->
                 <?php if (in_array($user['role_id'], [2, 3, 4, 5, 6, 7])): ?>
                 <div id="myRequestsContent" style="display: none;">
                     <h2 class="text-2xl font-bold mb-4 title-gradient">My Requests <span class="chip">📝</span></h2>
@@ -611,8 +613,6 @@ $rejected_pct = (int)round(($count_rejected / $pct_div) * 100);
                 <?php endif; ?>
         </main>
     </div>
-</body>
-</html>
 <script>
 // Live counts updater
 (function(){
@@ -1131,4 +1131,5 @@ document.addEventListener('DOMContentLoaded', function(){
     window.addEventListener('mousemove', onMove);
 })();
 </script>
+</body>
 </html>

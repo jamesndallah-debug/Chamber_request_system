@@ -2,6 +2,9 @@
 // FILE: request_history.php
 // View for displaying the complete history of a user's requests
 
+/** @var array $user */
+/** @var array $requests */
+
 // Get all requests for the current user
 // $requests is already fetched in index.php case 'request_history'
 ?>

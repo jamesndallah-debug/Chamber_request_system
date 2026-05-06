@@ -1,5 +1,9 @@
 <?php
 // FILE: leave_balances.php
+
+/** @var array $user */
+/** @var PDO $pdo */
+
 require_once __DIR__ . '/function.php';
 
 $canAdmin = isset($user) && (int)$user['role_id'] === 7;

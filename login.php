@@ -107,6 +107,5 @@ $error = $error ?? '';
             </form>
         </div>
     </div>
-    
     </body>
 </html>

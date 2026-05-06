@@ -2,6 +2,9 @@
 // FILE: edit_request.php
 // Form for editing a rejected request.
 
+/** @var array $user */
+/** @var array $request */
+
 $error = $error ?? '';
 
 if (!isset($request)) {
@@ -81,7 +84,7 @@ $details = json_decode((string)($request['details_json'] ?? '{}'), true) ?: [];
                 </div>
                 <p class="text-sm text-gray-600 mb-6">Modify your request and resubmit for approval.</p>
 
-                <?php if (!empty($error)): ?>
+                <?php if ($error): ?>
                     <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                         <span class="block sm:inline"><?= e($error) ?></span>
                     </div>

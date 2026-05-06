@@ -1,6 +1,9 @@
 <?php
 // FILE: partials/sidebar.php
 // Reusable sidebar for navigation.
+
+/** @var array $user */
+
 $current_action = $_GET['action'] ?? 'dashboard';
 $isActive = function($actions) use ($current_action) {
     if (!is_array($actions)) $actions = [$actions];

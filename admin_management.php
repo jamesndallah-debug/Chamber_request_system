@@ -2,6 +2,9 @@
 // FILE: admin_management.php
 // Modern & High-Standard Admin Dashboard for Chamber Request System
 
+/** @var array $user */
+/** @var PDO $pdo */
+
 if (!defined('ACCESS_ALLOWED')) {
     die('Direct access not allowed');
 }

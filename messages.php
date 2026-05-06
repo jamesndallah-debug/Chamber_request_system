@@ -40,7 +40,7 @@ if (isset($_POST['delete_message'])) {
 if (isset($_POST['mark_read'])) {
     require_csrf_post();
     $message_id = (int)$_POST['message_id'];
-    $is_notification = isset($_POST['is_notification']) && (int)$_POST['is_notification'] === 1;
+    $is_notification = isset($_POST['is_notification']) && $_POST['is_notification'] == 1;
     try {
         if ($is_notification) {
             $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
@@ -306,9 +306,11 @@ foreach ($all_items as $item) {
                             <select name="sender" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all">
                                 <option value="">All Senders</option>
                                 <option value="System" <?= $filter_sender === 'System' ? 'selected' : '' ?>>System Notifications</option>
-                                <?php foreach ($flow_senders as $s): ?>
-                                    <option value="<?= htmlspecialchars($s) ?>" <?= $filter_sender === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
-                                <?php endforeach; ?>
+                                <?php if (isset($flow_senders) && is_array($flow_senders)): ?>
+                                    <?php foreach ($flow_senders as $s): ?>
+                                        <option value="<?= htmlspecialchars($s) ?>" <?= $filter_sender === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
 

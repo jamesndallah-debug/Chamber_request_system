@@ -2,6 +2,9 @@
 // FILE: view_request.php
 // Shows a single request and allows role-based approval/rejection.
 
+/** @var array $user */
+/** @var array $request */
+
 // Check if this file is being accessed directly
 if (!isset($pdo)) {
     require_once __DIR__ . '/function.php';
@@ -719,8 +722,6 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </main>
     </div>
     <div id="confetti" class="confetti no-print" aria-hidden="true"></div>
-</body>
-</html>
 <script>
 (function(){
     // Confetti animation for approval button
@@ -778,3 +779,5 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 })();
 </script>
+</body>
+</html>

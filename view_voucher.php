@@ -2,6 +2,9 @@
 // FILE: view_voucher.php
 // View for displaying voucher details and handling voucher messages
 
+/** @var array $user */
+/** @var PDO $pdo */
+
 // Prevent direct access
 if (!defined('ACCESS_ALLOWED')) {
     header('HTTP/1.0 403 Forbidden');
