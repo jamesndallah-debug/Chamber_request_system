@@ -307,8 +307,7 @@ foreach ($all_items as $item) {
                                 <option value="">All Senders</option>
                                 <option value="System" <?= $filter_sender === 'System' ? 'selected' : '' ?>>System Notifications</option>
                                 <?php if (isset($flow_senders) && is_array($flow_senders)): ?>
-                                    <?php foreach ($flow_senders as $s): ?>
-                                        <option value="<?= htmlspecialchars($s) ?>" <?= $filter_sender === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
+                                    <?php foreach ($flow_senders as $s): ?>                                      <option value="<?= htmlspecialchars($s) ?>" <?= $filter_sender === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
