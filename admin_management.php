@@ -248,6 +248,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Handle password reset
+    if (isset($_POST['admin_reset_password'])) {
+        $target_user_id = (int)$_POST['user_id'];
+        $new_password = $_POST['new_password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+
+        if ($target_user_id && $new_password && $new_password === $confirm_password) {
+            if (strlen($new_password) >= 8) {
+                try {
+                    $hash = password_hash($new_password, PASSWORD_BCRYPT);
+                    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?");
+                    if ($stmt->execute([$hash, $target_user_id])) {
+                        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Password has been successfully reset.'];
+                    } else {
+                        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Failed to reset password.'];
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'System error: ' . $e->getMessage()];
+                }
+            } else {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Password must be at least 8 characters long.'];
+            }
+        } else {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Passwords do not match or are empty.'];
+        }
+        header('Location: index.php?action=admin_management');
+        exit;
+    }
+
     // Handle user creation
     if (isset($_POST['admin_create_user'])) {
         $fullname = trim($_POST['fullname'] ?? '');
@@ -465,6 +494,7 @@ try {
                                     </td>
                                     <td class="px-6 py-5">
                                         <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onclick="openResetPasswordModal(<?= (int)($u['user_id'] ?? 0) ?>, '<?= addslashes($u['fullname'] ?? 'Unknown') ?>')" class="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg" title="Reset Password">🔑</button>
                                             <button onclick="openMessageModal(<?= (int)($u['user_id'] ?? 0) ?>, '<?= addslashes($u['fullname'] ?? 'Unknown') ?>')" class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg" title="Message">📧</button>
                                             <?php if (($u['user_id'] ?? 0) != $user['user_id']): ?>
                                                 <form method="POST" class="inline">
@@ -721,6 +751,29 @@ try {
         </div>
     </div>
 
+    <div id="modal-reset-password" class="modal">
+        <div class="bg-white w-full max-w-md rounded-3xl p-10">
+            <h3 class="text-xl font-black mb-2">Reset Password</h3>
+            <p class="text-sm text-slate-400 mb-8">User: <span id="reset-user-name" class="text-blue-600 font-black"></span></p>
+            <form method="POST" class="space-y-6">
+                <?= csrf_field() ?>
+                <input type="hidden" name="user_id" id="reset-user-id">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">New Password</label>
+                    <input type="password" name="new_password" required minlength="8" class="form-input" placeholder="Min. 8 characters">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Confirm New Password</label>
+                    <input type="password" name="confirm_password" required minlength="8" class="form-input">
+                </div>
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" onclick="toggleModal('modal-reset-password')" class="font-bold text-slate-400">Cancel</button>
+                    <button type="submit" name="admin_reset_password" class="btn-primary">Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -755,6 +808,16 @@ try {
                 idInput.value = id;
                 nameSpan.innerText = name;
                 toggleModal('modal-message');
+            }
+        }
+
+        function openResetPasswordModal(id, name) {
+            const idInput = document.getElementById('reset-user-id');
+            const nameSpan = document.getElementById('reset-user-name');
+            if (idInput && nameSpan) {
+                idInput.value = id;
+                nameSpan.innerText = name;
+                toggleModal('modal-reset-password');
             }
         }
 
