@@ -81,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         .admin-login-container {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f172a;
+            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -89,95 +90,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 20px;
         }
         .admin-login-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             width: 100%;
             max-width: 450px;
             overflow: hidden;
         }
         .admin-header {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             color: white;
-            padding: 30px;
+            padding: 40px 30px;
             text-align: center;
         }
         .admin-header h1 {
-            font-size: 24px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 800;
             margin: 0 0 8px 0;
+            letter-spacing: -0.025em;
         }
         .admin-header p {
             font-size: 14px;
-            opacity: 0.9;
+            opacity: 0.8;
+            font-weight: 500;
             margin: 0;
         }
         .admin-form {
-            padding: 30px;
+            padding: 40px;
         }
         .admin-form .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
         .admin-form .form-label {
             display: block;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: #374151;
+            margin-bottom: 10px;
+            color: #94a3b8;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         .admin-form .form-input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
+            padding: 14px 18px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
             font-size: 16px;
-            transition: all 0.2s;
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .admin-form .form-input:focus {
             outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            background: #1e293b;
         }
         .admin-btn {
             width: 100%;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: #6366f1;
             color: white;
             border: none;
-            padding: 14px;
-            border-radius: 8px;
+            padding: 16px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
+            margin-top: 10px;
         }
         .admin-btn:hover {
+            background: #4f46e5;
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
         .error-message {
-            background: #fee2e2;
-            border: 1px solid #fecaca;
-            color: #b91c1c;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 24px;
             font-size: 14px;
+            font-weight: 500;
         }
         .back-link {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 30px;
             font-size: 14px;
         }
         .back-link a {
-            color: #4f46e5;
+            color: #94a3b8;
             text-decoration: none;
             font-weight: 500;
+            transition: color 0.2s;
         }
         .back-link a:hover {
-            text-decoration: underline;
+            color: white;
         }
         .admin-icon {
-            font-size: 48px;
+            font-size: 56px;
             margin-bottom: 16px;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
         }
     </style>
 </head>

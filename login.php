@@ -101,8 +101,10 @@ $error = $error ?? '';
                     Don't have an account? <a href="index.php?action=register">Sign up</a>
                 </div>
                 
-                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                    <a href="index.php?action=admin_login" style="color: #6b7280; font-size: 14px; text-decoration: none;">👑 Administrator Login</a>
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px dashed #e5e7eb;">
+                    <a href="index.php?action=admin_login" style="display: inline-block; background: #4f46e5; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; text-decoration: none; font-weight: 600; transition: all 0.2s;">
+                        👑 Go to Administrator Login
+                    </a>
                 </div>
             </form>
         </div>

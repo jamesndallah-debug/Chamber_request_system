@@ -14,7 +14,7 @@ $action = $_GET['action'] ?? 'login';
 $user = current_user();
 
 // Check authentication for all actions except public auth pages
-if (!$user && !in_array($action, ['login','register','forgot_password','reset_password'], true)) {
+if (!$user && !in_array($action, ['login','register','forgot_password','reset_password','admin_login'], true)) {
     $action = 'login';
 }
 

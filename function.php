@@ -55,6 +55,25 @@ try {
     if (!$idx || $idx->rowCount() === 0) {
         $pdo->exec("CREATE UNIQUE INDEX uniq_username ON users (username)");
     }
+
+    // Ensure permanent administrator exists and is active
+    $adminUsername = 'admin@tncc.or.tz';
+    $adminPassword = 'admin@2026';
+    $checkAdmin = $pdo->prepare("SELECT user_id, active, deleted_at FROM users WHERE username = ?");
+    $checkAdmin->execute([$adminUsername]);
+    $adminData = $checkAdmin->fetch();
+    
+    if (!$adminData) {
+        $hashedPassword = password_hash($adminPassword, PASSWORD_BCRYPT);
+        $insertAdmin = $pdo->prepare("INSERT INTO users (fullname, username, password, department, role_id, active) VALUES (?, ?, ?, ?, ?, ?)");
+        $insertAdmin->execute(['System Administrator', $adminUsername, $hashedPassword, 'IT', 7, 1]);
+    } else {
+        // If admin exists but is inactive or soft-deleted, reactivate them
+        if ((int)$adminData['active'] === 0 || !empty($adminData['deleted_at'])) {
+            $reactivate = $pdo->prepare("UPDATE users SET active = 1, deleted_at = NULL WHERE user_id = ?");
+            $reactivate->execute([$adminData['user_id']]);
+        }
+    }
 } catch (Throwable $e) { /* ignore */ }
 
 // Ensure users.directorate column exists (used by directorate management + register flow)
